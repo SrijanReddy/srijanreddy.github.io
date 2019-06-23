@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" >
+
+<head>
+  <meta charset="UTF-8">
+  <title>Vue Game Show</title>
+  
+  
+  
+      <link rel="stylesheet" href="css/style.css">
+
+  
+</head>
+
+<body>
+
+  
+<!-- App -->
+<div id="app">
+  <router-view></router-view>
+</div>
+
+<!-- Component: Start-->
+<template id="start">
+  <div class="container">
+    <h1>Vue Game Show</h1>
+    <div class="intro">
+      <img class="logo" src="https://vuejs.org/images/logo.png" alt="vue-logo"/>
+       <p class="sub">Open me in Full Page View</p>
+    </div>
+    <router-link to="/question" class="continue">Start</router-link>     
+  </div>
+</template>
+
+<!-- Component: Question -->
+<template id="question">
+  <div v-if="show">
+    <QuestionDetail :key="currentQuestion-1" v-if="questionType == 'question'" v-on:selected="nextQuestion" :question="questions[currentQuestion-1]"></QuestionDetail>
+    <Game1 v-if="questionType == 'game1'" v-on:game-over="nextQuestion" :game="questions[currentQuestion-1]"></Game1>
+    <Game2 v-if="questionType == 'game2'" v-on:game-over="nextQuestion" :game="questions[currentQuestion-1]"></Game2>
+    <Game3 v-if="questionType == 'game3'" v-on:game-over="nextQuestion" :game="questions[currentQuestion-1]"></Game3>    
+  </div>
+</template>
+
+<!-- Component: QuestionDetail -->
+<template id="question-detail">
+  <div>
+    <div class="score">£{{ score }}</div>
+    <div class="answer-feedback" v-show="answered">{{ feedback }}</div>
+    <div class="question-container">  
+      <p class="question">{{ question.question }}</p>
+      <button @click="select('a')" class="answer" :class="(answerIsA && answered)? classObject:''" :disabled="answered">{{ question.a }}</button>
+      <button @click="select('b')" class="answer" :class="(answerIsB && answered)? classObject:''" :disabled="answered">{{ question.b }}</button>
+      <button @click="select('c')" class="answer" :class="(answerIsC && answered)? classObject:''" :disabled="answered">{{ question.c }}</button>
+    </div>
+  </div>
+</template>
+
+<!-- Component: Game1 -->
+<template id="game1">
+  <div class="container full-height">       
+    <h1 class="title">Bonus Round</h1>   
+    <div v-if="complete">
+      <div class="feedback">
+        <p v-if="winner">Got it. £1000 to you.</p>
+        <p v-else>You didn't catch it in time.</p>
+      </div>
+      <button class="continue" @click="$emit('game-over')">Continue</button>
+    </div>
+    <div v-else>
+      <p class="instructions">{{ game.instruction }}</p>
+      <p class="clock">{{ timeRemaining }}</p>
+      <div @click="gotIt" class="slippery-dot"></div>
+    </div>      
+  </div>
+</template>
+
+<!-- Component: Game2 -->
+<template id="game2">
+  <div class="container">
+    <h1>Bonus Round</h1>  
+    <div v-if="complete">
+      <div class="feedback">
+        <p class="final-time">{{ finalTime }}</p>
+        <p v-if="success">Nice. £1000 to you.</p>
+        <p v-else>Nope.</p>
+      </div>  
+      <button class="continue" @click="$emit('game-over')">Continue</button>
+    </div>
+    <div v-else>
+      <p class="instructions">{{ game.instruction }}</p>
+      <button v-show="!started" @click="startTimer" class="timer">Start</button>
+      <button v-show="started" @click="stopTimer" class="timer">Press again after 10 seconds</button>
+    </div>
+  </div>
+</template>
+
+<!-- Component: Game3 -->
+<template id="game3">
+  <div class="container">
+    <h1>Bonus Round</h1>
+    <div v-if="complete">
+      <div class="feedback">
+        <p v-if="correct">Correct. £1000 to you.</p>
+        <p v-else>Wrong cup.</p>
+      </div>
+      <button class="continue" @click="$emit('game-over')">Continue</button>
+    </div>
+    <div v-else>
+      <div class="cup-area">
+        <div class="cup-container" id="cup1">
+          <div class="ball"></div>
+          <img v-on="{ click: inProgress ? selectCorrectCup : null }" class="cup" src="http://patrickhurley.co.uk/assets/img/cup.png" alt="cup"/>
+          
+        </div>
+        <div class="cup-container" id="cup2">
+          <img v-on="{ click: inProgress ? selectWrongCup : null }" class="cup" src="http://patrickhurley.co.uk/assets/img/cup.png" alt="cup"/>
+        </div>
+        <div class="cup-container" id="cup3">
+          <img v-on="{ click: inProgress ? selectWrongCup : null }" class="cup" src="http://patrickhurley.co.uk/assets/img/cup.png" alt="cup"/>
+        </div>
+      </div>
+      <p class="late-instructions">{{ game.instruction }}</p>
+    </div>
+  </div>
+</template>
+
+<!-- Component: Result -->
+<template id="result">
+  <div class="container">
+    <h1>The results are in.</h1>
+    <p class="results">You won £{{ score }}.</p>
+    <p class="sort-of">(sort of)</p> 
+    <router-link to="/" class="continue">Play again</router-link>
+  </div>
+</template>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/vuex/3.1.0/vuex.min.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.0.2/vue-router.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/vue@2.6.6/dist/vue.js'></script>
+
+  
+
+    <script  src="js/index.js"></script>
+
+
+
+
+</body>
+
+</html>
