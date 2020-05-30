@@ -5,7 +5,7 @@ Browser-based Games Website(front end) using html,css,javascript,bootstrap
             
  <br>
  
- ## Status [![Website srijanreddy.github.io](https://img.shields.io/website-up-down-green-red/http/cv.lbesson.qc.to.svg)](http://srijanreddy.github.io/)
+ ## Status - [![Website srijanreddy.github.io](https://img.shields.io/website-up-down-green-red/http/cv.lbesson.qc.to.svg)](http://srijanreddy.github.io/)
 
 <br>
    <i>Mini-project done as per coursework of semester 6</i>
