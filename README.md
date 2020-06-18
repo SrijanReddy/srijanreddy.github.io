@@ -12,4 +12,9 @@ Browser-based Games Website(front end) using html,css,javascript,bootstrap
 <br>
    <i>Mini-project done as per coursework of semester 6</i>
 
+<br>
+<br>
 
+V2-Web App added [repo](https://github.com/SrijanReddy/Random/tree/master/008)
+<br>
+V1-Website hosted on github [link](srijanreddy.github.io)
