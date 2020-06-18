@@ -7,7 +7,7 @@ Browser-based Games Website(front end) using html,css,javascript,bootstrap
  
  ## count - [![HitCount](http://hits.dwyl.com/SrijanReddy/Rezo-Gaming/.svg)](http://hits.dwyl.com/SrijanReddy/Rezo-Gaming/)
 
- ## Status - [![Website srijanreddy.github.io](https://img.shields.io/website-up-down-green-red/http/cv.lbesson.qc.to.svg)](http://srijanreddy.github.io/)
+ ## Status - [![Website srijanreddy.github.io](https://img.shields.io/badge/website-up-brightgreen)](http://srijanreddy.github.io/)
 
 <br>
    <i>Mini-project done as per coursework of semester 6</i>
