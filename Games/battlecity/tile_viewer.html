@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Battle City CHR Tile Viewer</title>
+<style>
+  body { background: #111; color: #ccc; font-family: monospace; margin: 0; padding: 12px; }
+  h1   { font-size: 14px; margin: 0 0 6px; color: #fff; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; font-size: 11px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .swatch { width: 12px; height: 12px; border: 1px solid #555; display: inline-block; }
+  canvas  { display: block; image-rendering: pixelated; cursor: crosshair; }
+  #info   { margin-top: 8px; font-size: 12px; min-height: 1.6em; color: #ff0; }
+  #palette-sel { margin-bottom: 8px; font-size: 12px; }
+  label   { margin-right: 10px; }
+</style>
+</head>
+<body>
+<h1>Battle City CHR Tile Viewer — chr_all.png (512 tiles: 0–255 BG, 256–511 Sprite) — Bank pair 1 (banks 2+3)</h1>
+
+<div id="palette-sel">
+  Palette:
+  <label><input type="radio" name="pal" value="0" checked> BG0 Brick</label>
+  <label><input type="radio" name="pal" value="1"> BG1 Trees</label>
+  <label><input type="radio" name="pal" value="2"> BG2 Water</label>
+  <label><input type="radio" name="pal" value="3"> BG3 Steel</label>
+  <label><input type="radio" name="pal" value="4"> SP0 P1</label>
+  <label><input type="radio" name="pal" value="5"> SP1 P2</label>
+  <label><input type="radio" name="pal" value="6"> SP2 Enemy</label>
+  <label><input type="radio" name="pal" value="7"> SP3 Special</label>
+  <label><input type="radio" name="pal" value="-1"> Grayscale (raw)</label>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="swatch" style="background:#224;"></span> BG tiles 0–255 (PPU $0000, file $A010)</div>
+  <div class="legend-item"><span class="swatch" style="background:#244;"></span> BG terrain $00–$3F (brick/steel/water/trees/ice)</div>
+  <div class="legend-item"><span class="swatch" style="background:#244244;"></span> BG HUD/score $60–$7F</div>
+  <div class="legend-item"><span class="swatch" style="background:#224;"></span> Sprite tiles 256–511 (PPU $1000, file $B010)</div>
+  <div class="legend-item"><span class="swatch" style="background:#442;"></span> Player tanks $00–$7F</div>
+  <div class="legend-item"><span class="swatch" style="background:#422;"></span> Enemy tanks $80–$FF</div>
+  <div class="legend-item"><span class="swatch" style="background:#244;"></span> Spawn anim $A0–$AF (BG/PT1)</div>
+  <div class="legend-item"><span class="swatch" style="background:#424;"></span> Bullet expl $B0–$B7 (BG/PT1)</div>
+  <div class="legend-item"><span class="swatch" style="background:#244;"></span> Eagle intact $D0–$DF (BG/PT1)</div>
+  <div class="legend-item"><span class="swatch" style="background:#422;"></span> Eagle damaged $E0–$EF (BG/PT1)</div>
+  <div class="legend-item"><span class="swatch" style="background:#444;"></span> Eagle explosion $F0–$F9 (BG/PT1)</div>
+</div>
+
+<canvas id="cv"></canvas>
+<div id="info">Hover over a tile to see its index and category.</div>
+
+<script>
+// ROM: PPUCTRL=$B0 (8×16 sprites, BG at $1000, sprite-even at $0000)
+// chr_all.png layout: 512 tiles in 32×16 grid, 9px cell (8px tile + 1px border)
+// Bank pair 1 (mapper banks 2+3) — used for stage 1 gameplay
+// tiles  0–255 = PPU $0000 = file $A010 = BG
+// tiles 256–511 = PPU $1000 = file $B010 = Sprite
+
+const NES_PAL = [
+  ['#000000','#8A4600','#7B0E00','#626262'],  // BG0 brick
+  ['#000000','#B3F9E1','#ABABAB','#424DC6'],  // BG1 trees
+  ['#000000','#84CC00','#1E5200','#006A18'],  // BG2 water
+  ['#000000','#626262','#ABABAB','#FFFFFF'],  // BG3 steel/ice
+  ['#000000','#616300','#F48F25','#F0E070'],  // SP0 P1 yellow
+  ['#000000','#006000','#008F38','#B2FCBA'],  // SP1 P2 green
+  ['#000000','#005E52','#ABABAB','#FFFFFF'],  // SP2 enemy/eagle gray
+  ['#000000','#730D68','#AF2B1C','#FFFFFF'],  // SP3 special/PU
+];
+
+// Category border colors for tile highlighting
+function tileCategory(idx) {
+  if (idx < 256) {
+    // BG bank (file $A010, bank pair 1)
+    const t = idx;
+    if (t >= 0xA0 && t <= 0xAF) return { name: `BG spawn-anim PT1 tile $${t.toString(16).toUpperCase()}`, col: '#00ffaa' };
+    if (t >= 0xB0 && t <= 0xB7) return { name: `BG bullet-expl PT1 tile $${t.toString(16).toUpperCase()}`, col: '#ff88ff' };
+    if (t >= 0xD0 && t <= 0xDF) return { name: `BG eagle-intact PT1 tile $${t.toString(16).toUpperCase()}`, col: '#aaffaa' };
+    if (t >= 0xE0 && t <= 0xEF) return { name: `BG eagle-damaged PT1 tile $${t.toString(16).toUpperCase()}`, col: '#ff4444' };
+    if (t >= 0xF0 && t <= 0xFF) return { name: `BG eagle-explode PT1 tile $${t.toString(16).toUpperCase()}`, col: '#ffff44' };
+    if (t >= 0x78 && t <= 0x7F) return { name: `BG HUD tank icon PT1 tile $${t.toString(16).toUpperCase()}`, col: '#88aaff' };
+    if (t >= 0x60 && t <= 0x77) return { name: `BG HUD digit/score PT1 tile $${t.toString(16).toUpperCase()}`, col: '#aaaaff' };
+    if (t >= 0x20 && t <= 0x5F) return { name: `BG terrain/misc tile $${t.toString(16).toUpperCase()}`, col: '#aaddff' };
+    if (t <= 0x1F)               return { name: `BG terrain tile $${t.toString(16).toUpperCase()} (brick/steel/water/trees)`, col: '#88ccff' };
+    return { name: `BG misc tile $${t.toString(16).toUpperCase()}`, col: '#667799' };
+  } else {
+    // Sprite bank (file $B010, bank pair 1): OAM tile byte T → PNG 256+T
+    const t = idx - 256;   // OAM tile byte
+    if (t >= 0x00 && t <= 0x7F) return { name: `Sprite P1/P2 tank (OAM $${t.toString(16).toUpperCase()}) — base=$${(t & 0xF0).toString(16).toUpperCase()} dir=${['up','left','down','right'][(t>>3)&3]} anim=${t&1}`, col: '#ffffaa' };
+    if (t >= 0x80 && t <= 0x9F) return { name: `Sprite enemy tier-0 (OAM $${t.toString(16).toUpperCase()})`, col: '#ffaaaa' };
+    if (t >= 0xA0 && t <= 0xBF) return { name: `Sprite enemy tier-1 (OAM $${t.toString(16).toUpperCase()})`, col: '#ffbb88' };
+    if (t >= 0xC0 && t <= 0xDF) return { name: `Sprite enemy tier-2 (OAM $${t.toString(16).toUpperCase()})`, col: '#ffdd88' };
+    if (t >= 0xE0 && t <= 0xFF) return { name: `Sprite enemy tier-3 (OAM $${t.toString(16).toUpperCase()})`, col: '#ff8888' };
+    return { name: `Sprite tile $${t.toString(16).toUpperCase()}`, col: '#888888' };
+  }
+}
+
+function grayToIdx(r) { return r < 0x2B ? 0 : r < 0x7F ? 1 : r < 0xD5 ? 2 : 3; }
+
+const CELL = 9, COLS = 32, ROWS = 16;
+const ZOOM = 3;   // each 8px tile drawn at 8*ZOOM px
+const TILE_W = 8 * ZOOM + 2;  // tile area + 2px gap
+const GRID_W = COLS * TILE_W + 2;
+const GRID_H = ROWS * TILE_W + 2;
+
+const cv  = document.getElementById('cv');
+cv.width  = GRID_W;
+cv.height = GRID_H;
+const ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+let chrOff = null, rawImg = null;
+let palIdx = 0;
+
+function getPalIdx() {
+  const v = document.querySelector('input[name=pal]:checked').value;
+  return parseInt(v);
+}
+
+function drawAllTiles() {
+  if (!chrOff) return;
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+
+  for (let i = 0; i < 512; i++) {
+    drawTile(i);
+  }
+}
+
+function drawTile(idx, highlight) {
+  if (!chrOff) return;
+  const col = idx % COLS, row = (idx / COLS) | 0;
+  // source in chr_all.png
+  const sx = (idx % 32) * CELL + 1;
+  const sy = ((idx / 32) | 0) * CELL + 1;
+  // dest on canvas
+  const dx = col * TILE_W + 1;
+  const dy = row * TILE_W + 1;
+
+  const pal = getPalIdx();
+
+  if (pal === -1) {
+    // Grayscale: draw raw PNG scaled
+    ctx.drawImage(rawImg, sx, sy, 8, 8, dx, dy, 8 * ZOOM, 8 * ZOOM);
+  } else {
+    // Apply NES palette
+    const palColors = NES_PAL[pal];
+    const pdata = chrOff.getImageData(sx, sy, 8, 8).data;
+    for (let py = 0; py < 8; py++) {
+      for (let px2 = 0; px2 < 8; px2++) {
+        const cidx = grayToIdx(pdata[(py * 8 + px2) * 4]);
+        ctx.fillStyle = palColors[cidx];
+        ctx.fillRect(dx + px2 * ZOOM, dy + py * ZOOM, ZOOM, ZOOM);
+      }
+    }
+  }
+
+  // Category border
+  const cat = tileCategory(idx);
+  if (highlight) {
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(dx - 1, dy - 1, 8 * ZOOM + 2, 8 * ZOOM + 2);
+  } else {
+    // Subtle category tint on the 1px border area
+    ctx.fillStyle = cat.col + '44';
+    ctx.fillRect(dx - 1, dy - 1, 8 * ZOOM + 2, 1);
+    ctx.fillRect(dx - 1, dy + 8*ZOOM, 8 * ZOOM + 2, 1);
+    ctx.fillRect(dx - 1, dy, 1, 8 * ZOOM);
+    ctx.fillRect(dx + 8*ZOOM, dy, 1, 8 * ZOOM);
+  }
+}
+
+const img = new Image();
+img.src = 'tiles/chr_all.png';
+img.onload = () => {
+  const oc = document.createElement('canvas');
+  oc.width = img.width; oc.height = img.height;
+  chrOff = oc.getContext('2d');
+  chrOff.drawImage(img, 0, 0);
+  rawImg = img;
+  drawAllTiles();
+};
+
+document.querySelectorAll('input[name=pal]').forEach(r => r.addEventListener('change', drawAllTiles));
+
+// Hover info
+let lastHover = -1;
+cv.addEventListener('mousemove', e => {
+  const rect = cv.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const col = Math.floor(mx / TILE_W);
+  const row = Math.floor(my / TILE_W);
+  if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return;
+  const idx = row * COLS + col;
+  if (idx === lastHover) return;
+  if (lastHover >= 0) drawTile(lastHover, false);
+  lastHover = idx;
+  drawTile(idx, true);
+
+  const cat = tileCategory(idx);
+  const oamByte = idx >= 256 ? ` | OAM tile byte $${(idx-256).toString(16).toUpperCase().padStart(2,'0')}` : ` | PNG BG index $${idx.toString(16).toUpperCase().padStart(2,'0')}`;
+  document.getElementById('info').textContent =
+    `Tile ${idx} (PNG abs ${idx})${oamByte} — ${cat.name}`;
+});
+
+cv.addEventListener('mouseleave', () => {
+  if (lastHover >= 0) { drawTile(lastHover, false); lastHover = -1; }
+  document.getElementById('info').textContent = 'Hover over a tile to see its index and category.';
+});
+
+// Click: log to console for debugging
+cv.addEventListener('click', e => {
+  const rect = cv.getBoundingClientRect();
+  const col = Math.floor((e.clientX - rect.left) / TILE_W);
+  const row = Math.floor((e.clientY - rect.top) / TILE_W);
+  const idx = row * COLS + col;
+  const cat = tileCategory(idx);
+  console.log(`Tile ${idx}:`, cat);
+});
+</script>
+</body>
+</html>

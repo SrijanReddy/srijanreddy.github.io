@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donkey Kong - Arcade Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+    }
+    #gameContainer {
+      position: relative;
+      border: 3px solid #c84c09;
+      box-shadow: 0 0 30px rgba(200, 76, 9, 0.5);
+    }
+    canvas { display: block; }
+    #ui {
+      position: absolute;
+      top: 8px; left: 0; width: 100%;
+      display: flex; justify-content: space-between;
+      padding: 0 12px; color: #fff; font-size: 11px;
+      pointer-events: none; z-index: 10;
+    }
+    #uiRow2 {
+      position: absolute;
+      top: 22px; left: 0; width: 100%;
+      display: flex; justify-content: space-between;
+      padding: 0 12px; color: #fff; font-size: 9px;
+      pointer-events: none; z-index: 10;
+    }
+    #startScreen {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      background: rgba(0,0,0,0.85); color: #fff; z-index: 20;
+    }
+    #startScreen h1 { font-size: 22px; color: #c84c09; margin-bottom: 10px; text-shadow: 2px 2px #000; }
+    #startScreen .subtitle { font-size: 10px; color: #f5a623; margin-bottom: 30px; }
+    #startScreen .controls { font-size: 9px; color: #aaa; line-height: 2; text-align: center; margin-bottom: 30px; }
+    #startScreen .blink { font-size: 12px; color: #fff; animation: blink 1s infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    #gameOver, #winScreen, #pauseScreen {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: none; flex-direction: column;
+      justify-content: center; align-items: center;
+      background: rgba(0,0,0,0.85); color: #fff; z-index: 20;
+    }
+    #gameOver h2 { font-size: 20px; color: #e74c3c; margin-bottom: 15px; }
+    #winScreen h2 { font-size: 18px; color: #2ecc71; margin-bottom: 15px; }
+    #pauseScreen h2 { font-size: 20px; color: #f5a623; margin-bottom: 15px; }
+    .score { font-size: 12px; color: #f5a623; margin-bottom: 8px; }
+    #gameOver .blink, #winScreen .blink, #pauseScreen .blink { font-size: 11px; animation: blink 1s infinite; margin-top: 20px; }
+    #mobileControls {
+      display: none; position: absolute; bottom: 10px; left: 0;
+      width: 100%; justify-content: space-between; padding: 0 15px; z-index: 15;
+    }
+    .dpad { display: grid; grid-template-columns: 44px 44px 44px; grid-template-rows: 44px 44px; gap: 3px; }
+    .dpad button, .actionBtn {
+      background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 8px; color: #fff; font-size: 18px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    }
+    .dpad button:active, .actionBtn:active { background: rgba(255,255,255,0.35); }
+    .actionBtn { width: 60px; height: 60px; font-size: 14px; align-self: flex-end; }
+    .smallBtn { width: 44px; height: 44px; font-size: 10px; align-self: flex-end; }
+    @media (pointer: coarse) { #mobileControls { display: flex; } }
+    #topButtons {
+      position: absolute; top: 4px; right: 4px; z-index: 25;
+      display: flex; gap: 4px;
+    }
+    #topButtons button {
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px; color: #fff; font-size: 12px; cursor: pointer;
+      padding: 2px 6px; pointer-events: all;
+    }
+    #topButtons button:hover { background: rgba(255,255,255,0.3); }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <canvas id="game"></canvas>
+    <div id="ui">
+      <span>SCORE: <span id="score">0</span></span>
+      <span>LIVES: <span id="lives">3</span></span>
+      <span>LEVEL: <span id="level">1</span></span>
+    </div>
+    <div id="uiRow2">
+      <span style="color:#f5a623">HI: <span id="hiScore">0</span></span>
+      <span id="hammerUI" style="color:#e74c3c; display:none">🔨 <span id="hammerTimer"></span></span>
+      <span id="comboUI" style="color:#2ecc71; display:none">COMBO x<span id="comboCount">0</span></span>
+    </div>
+    <div id="topButtons">
+      <button id="btnMute" title="Toggle Sound (M)">🔊</button>
+      <button id="btnPause" title="Pause (P)">⏸</button>
+    </div>
+    <div id="startScreen">
+      <h1>🦍 DONKEY KONG</h1>
+      <div class="subtitle">ARCADE EDITION</div>
+      <div class="controls">
+        ← → MOVE &nbsp;|&nbsp; SPACE JUMP<br>
+        CLIMB LADDERS WITH ↑ ↓<br>
+        DODGE BARRELS • REACH THE TOP!<br>
+        🔨 GRAB HAMMER TO SMASH BARRELS<br>
+        P = PAUSE &nbsp;|&nbsp; M = MUTE
+      </div>
+      <div class="blink">PRESS SPACE TO START</div>
+    </div>
+    <div id="gameOver">
+      <h2>GAME OVER</h2>
+      <div class="score">SCORE: <span id="finalScore">0</span></div>
+      <div class="score">HIGH SCORE: <span id="highScore">0</span></div>
+      <div class="blink">PRESS SPACE TO RETRY</div>
+    </div>
+    <div id="winScreen">
+      <h2>🎉 YOU WIN!</h2>
+      <div class="score">SCORE: <span id="winScore">0</span></div>
+      <div class="score">HIGH SCORE: <span id="winHighScore">0</span></div>
+      <div class="blink">PRESS SPACE FOR NEXT LEVEL</div>
+    </div>
+    <div id="pauseScreen">
+      <h2>⏸ PAUSED</h2>
+      <div class="score">SCORE: <span id="pauseScore">0</span></div>
+      <div class="blink">PRESS P OR SPACE TO RESUME</div>
+    </div>
+    <div id="mobileControls">
+      <div class="dpad">
+        <div></div><button id="btnUp">▲</button><div></div>
+        <button id="btnLeft">◀</button><button id="btnDown">▼</button><button id="btnRight">▶</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
+        <button class="actionBtn" id="btnJump">JUMP</button>
+      </div>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
