@@ -1,0 +1,145 @@
+:root {
+    --bg-color: #e0f7fa;
+    --game-bg: #81c784; /* Grass green */
+    --water-color: #4fc3f7;
+    --road-color: #546e7a;
+    --text-color: #263238;
+    --accent-color: #ffca28;
+    --btn-bg: #ff7043;
+    --btn-hover: #f4511e;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Nunito', sans-serif;
+    background-color: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: var(--text-color);
+}
+
+.game-container {
+    position: relative;
+    max-width: 600px;
+    width: 100%;
+    padding: 20px;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    font-family: 'Fredoka One', cursive; /* Cute chubby font for headers */
+    color: #004d40;
+}
+
+.game-wrapper {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    background-color: #333; /* Canvas bg fallback */
+    width: 560px;
+    height: 640px;
+    margin: 0 auto;
+}
+
+canvas {
+    display: block;
+    background-color: var(--game-bg);
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    z-index: 10;
+    transition: opacity 0.3s ease;
+}
+
+.hidden {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden; /* Important for accessibility so buttons aren't clickable when hidden */
+}
+
+h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 3rem;
+    color: var(--btn-bg);
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+}
+
+.subtitle {
+    font-size: 1.5rem;
+    color: var(--text-color);
+}
+
+p {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+}
+
+.btn {
+    padding: 12px 30px;
+    font-size: 1.2rem;
+    font-family: 'Fredoka One', cursive;
+    color: white;
+    background-color: var(--btn-bg);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #d84315; /* Retro pressable button style */
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.btn:hover {
+    background-color: var(--btn-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 7px 0 #d84315;
+}
+
+.btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 3px 0 #d84315;
+}
+
+.controls-hint {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.icon-btn {
+    background: none;
+    border: 2px solid var(--text-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.icon-btn:hover {
+    background-color: var(--text-color);
+    color: white;
+}

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Lunar Lander — Tests</title>
+<style>
+  body { font-family: monospace; background: #111; color: #ccc; padding: 20px; }
+  .pass { color: #0f0; } .fail { color: #f44; font-weight: bold; }
+  #summary { font-size: 1.2em; margin-top: 16px; border-top: 1px solid #333; padding-top: 12px; }
+  h2 { color: #0f0; margin-bottom: 16px; }
+  h3 { color: #aaa; margin: 14px 0 6px; }
+</style>
+</head>
+<body>
+<h2>Lunar Lander — Unit Tests</h2>
+<div id="output"></div>
+<div id="summary"></div>
+<script>
+  let passed = 0, failed = 0;
+  const out = document.getElementById('output');
+  function assert(desc, condition) {
+    const el = document.createElement('div');
+    el.className = condition ? 'pass' : 'fail';
+    el.textContent = (condition ? '✓ ' : '✗ ') + desc;
+    out.appendChild(el);
+    condition ? passed++ : failed++;
+  }
+  function assertApprox(desc, a, b, tol = 0.001) {
+    assert(desc + ` (got ${+a.toFixed(6)})`, Math.abs(a - b) < tol);
+  }
+  function heading(text) {
+    const el = document.createElement('h3');
+    el.textContent = text;
+    out.appendChild(el);
+  }
+  window.addEventListener('load', () => {
+    document.getElementById('summary').textContent =
+      `${passed} passed, ${failed} failed`;
+  });
+</script>
+<script src="../src/config.js"></script>
+<script src="../src/terrain.js"></script>
+<script src="../src/physics.js"></script>
+<script src="../src/score.js"></script>
+<script src="../tests/test-terrain.js"></script>
+<script src="../tests/test-physics.js"></script>
+<script src="../tests/test-score.js"></script>
+</body>
+</html>

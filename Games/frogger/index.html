@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frogger: Nature Hop</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="game-container">
+        
+        <header class="game-header">
+            <div class="score-board">
+                <span>Score: <span id="score">0</span></span>
+                <span>Level: <span id="level">1</span></span>
+            </div>
+            <div class="lives-board">
+                Lives: <span id="lives">❤️❤️❤️</span>
+            </div>
+        </header>
+
+        <div class="game-wrapper">
+            <canvas id="game-canvas" width="560" height="640"></canvas>
+            
+            <div id="start-screen" class="overlay">
+                <h1>Frogger<br><span class="subtitle">Nature Hop</span></h1>
+                <p>Use Arrow Keys or WASD to move</p>
+                <button id="start-btn" class="btn">Start Game</button>
+            </div>
+
+            <div id="game-over-screen" class="overlay hidden">
+                <h1>Game Over</h1>
+                <p>Score: <span id="final-score">0</span></p>
+                <button id="restart-btn" class="btn">Try Again</button>
+            </div>
+
+            <div id="level-complete-screen" class="overlay hidden">
+                <h1>Level Complete!</h1>
+                <p>Get ready for next level...</p>
+            </div>
+
+            <div id="pause-screen" class="overlay hidden">
+                <h1>Paused</h1>
+                <button id="resume-btn" class="btn">Resume</button>
+            </div>
+        </div>
+
+        <div class="controls-hint">
+            <button id="pause-btn" class="icon-btn">⏸️</button>
+        </div>
+
+    </div>
+
+    <script src="javascript/script.js"></script>
+</body>
+</html>
