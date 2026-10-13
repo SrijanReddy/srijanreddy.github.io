@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Connect Four</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0a1628;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 { margin-bottom: 10px; }
+
+        select {
+            padding: 8px 16px;
+            font-size: 16px;
+            margin-left: 15px;
+            border-radius: 5px;
+        }
+
+        #status {
+            font-size: 18px;
+            margin-top: 10px;
+            color: #ffd700;
+        }
+
+        .board {
+            background-color: #004080;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 60px);
+            grid-template-rows: repeat(6, 60px);
+            gap: 5px;
+        }
+
+        .cell {
+            width: 60px;
+            height: 60px;
+            background-color: #1a3a5c;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cell:hover {
+            background-color: #2a4a6c;
+        }
+
+        .cell.player {
+            background-color: #007bff;
+            box-shadow: inset 0 -5px 10px rgba(0,0,0,0.3);
+        }
+
+        .cell.computer {
+            background-color: #dc3545;
+            box-shadow: inset 0 -5px 10px rgba(0,0,0,0.3);
+        }
+
+        .cell.winning {
+            background-color: #ffd700 !important;
+            animation: pulse 0.8s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.15); box-shadow: 0 0 20px gold; }
+        }
+
+        .controls { margin-top: 20px; display: flex; gap: 10px; }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+        }
+
+        .new-game-btn { background-color: #28a745; color: white; }
+        .difficulty-btn { background-color: #ffc107; color: black; }
+    </style>
+</head>
+<body>
+    <h1>Connect Four</h1>
+
+    <div style="display:flex;align-items:center;">
+        <label for="difficulty">Difficulty:</label>
+        <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+        </select>
+    </div>
+
+    <div id="status">Your Turn!</div>
+
+    <div class="board">
+        <div id="grid" class="board-grid"></div>
+    </div>
+
+    <div class="controls">
+        <button class="new-game-btn" onclick="newGame()">New Game</button>
+        <button class="difficulty-btn" onclick="changeDifficulty()">Change Difficulty</button>
+    </div>
+
+    <script>
+        const ROWS = 6;
+        const COLS = 7;
+        const PLAYER = 1;
+        const COMPUTER = 2;
+
+        let board = [];
+        let currentPlayer = PLAYER;
+        let gameActive = true;
+        let difficulty = 'medium';
+
+        function createBoard() {
+            return Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        }
+
+        function renderBoard() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                for (let col = 0; col < COLS; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (board[row][col] === PLAYER) {
+                        cell.classList.add('player');
+                    } else if (board[row][col] === COMPUTER) {
+                        cell.classList.add('computer');
+                    }
+                    cell.dataset.col = col;
+                    cell.onclick = () => handleCellClick(col);
+                    grid.appendChild(cell);
+                }
+            }
+
+            highlightWinningCells();
+        }
+
+        function getValidRow(col) {
+            for (let row = 0; row < ROWS; row++) {
+                if (board[row][col] === 0) return row;
+            }
+            return -1;
+        }
+
+        function handleCellClick(col) {
+            if (!gameActive || currentPlayer !== PLAYER) return;
+
+            const row = getValidRow(col);
+            if (row === -1) return;
+
+            board[row][col] = PLAYER;
+            renderBoard();
+
+            if (checkWin(board, PLAYER)) {
+                gameActive = false;
+                showWinner('player');
+                return;
+            }
+
+            if (checkDraw(board)) {
+                gameActive = false;
+                showWinner('draw');
+                return;
+            }
+
+            currentPlayer = COMPUTER;
+            document.getElementById('status').textContent = "Computer's Turn...";
+
+            setTimeout(computerMove, 500);
+        }
+
+        function computerMove() {
+            if (!gameActive) return;
+
+            const col = getBestColumn();
+            const row = getValidRow(col);
+            board[row][col] = COMPUTER;
+            renderBoard();
+
+            if (checkWin(board, COMPUTER)) {
+                gameActive = false;
+                showWinner('computer');
+                return;
+            }
+
+            if (checkDraw(board)) {
+                gameActive = false;
+                showWinner('draw');
+                return;
+            }
+
+            currentPlayer = PLAYER;
+            document.getElementById('status').textContent = "Your Turn!";
+        }
+
+        function getBestColumn() {
+            switch(difficulty) {
+                case 'easy': return getRandomMove();
+                case 'medium': return Math.random() < 0.6 ? getBestMoves(2)[0] : getRandomMove();
+                case 'hard': return getHardMove();
+                default: return getRandomMove();
+            }
+        }
+
+        function getRandomMove() {
+            const validCols = [];
+            for (let col = 0; col < COLS; col++) {
+                if (getValidRow(col) !== -1) validCols.push(col);
+            }
+            return validCols[Math.floor(Math.random() * validCols.length)];
+        }
+
+        function getHardMove() {
+            const bestMoves = getBestMoves(4);
+            return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+        }
+
+        function getBestMoves(depth) {
+            let bestScore = -Infinity;
+            let bestColumns = [];
+
+            for (let col = 0; col < COLS; col++) {
+                if (getValidRow(col) === -1) continue;
+
+                const row = getValidRow(col);
+                board[row][col] = COMPUTER;
+                const score = minimax(board, depth - 1, false, -Infinity, Infinity);
+                board[row][col] = 0;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestColumns = [col];
+                } else if (score === bestScore) {
+                    bestColumns.push(col);
+                }
+            }
+
+            return bestColumns.length > 0 ? bestColumns : getRandomMove();
+        }
+
+        function minimax(board, depth, isMaximizing, alpha, beta) {
+            if (checkWin(board, COMPUTER)) return 100 + depth;
+            if (checkWin(board, PLAYER)) return -100 - depth;
+            if (checkDraw(board)) return 0;
+            if (depth === 0) return evaluateBoard(board);
+
+            if (isMaximizing) {
+                let maxScore = -Infinity;
+                for (let col = 0; col < COLS; col++) {
+                    const row = getValidRow(col);
+                    if (row === -1) continue;
+                    board[row][col] = COMPUTER;
+                    const score = minimax(board, depth - 1, false, alpha, beta);
+                    board[row][col] = 0;
+                    maxScore = Math.max(maxScore, score);
+                    alpha = Math.max(alpha, score);
+                    if (beta <= alpha) break;
+                }
+                return maxScore;
+            } else {
+                let minScore = Infinity;
+                for (let col = 0; col < COLS; col++) {
+                    const row = getValidRow(col);
+                    if (row === -1) continue;
+                    board[row][col] = PLAYER;
+                    const score = minimax(board, depth - 1, true, alpha, beta);
+                    board[row][col] = 0;
+                    minScore = Math.min(minScore, score);
+                    beta = Math.min(beta, score);
+                    if (beta <= alpha) break;
+                }
+                return minScore;
+            }
+        }
+
+        function evaluateBoard(board) {
+            let score = 0;
+            const centerCol = 3;
+
+            for (let row = 0; row < ROWS; row++) {
+                if (board[row][centerCol] === COMPUTER) score += 2;
+                else if (board[row][centerCol] === PLAYER) score -= 2;
+            }
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    score += evaluatePosition(board, row, col, COMPUTER) * 1.5 - evaluatePosition(board, row, col, PLAYER);
+                }
+            }
+
+            return score;
+        }
+
+        function evaluatePosition(board, startRow, startCol, player) {
+            let score = 0;
+
+            for (let c = startCol; c < Math.min(startCol + 4, COLS); c++) {
+                if (board[startRow][c] === player) score++;
+            }
+            if (score >= 3) return score * 10;
+
+            for (let r = startRow; r < Math.min(startRow + 4, ROWS); r++) {
+                if (board[r][startCol] === player) score++;
+            }
+            if (score >= 3) return score * 10;
+
+            let diagScore = 0;
+            for (let i = 0; i < 4 && startRow + i < ROWS && startCol + i < COLS; i++) {
+                if (board[startRow + i][startCol + i] === player) diagScore++;
+            }
+            if (diagScore >= 3) return diagScore * 10;
+
+            let upRight = 0;
+            for (let i = 0; i < 4 && startRow - i >= 0 && startCol + i < COLS; i++) {
+                if (board[startRow - i][startCol + i] === player) upRight++;
+            }
+            if (upRight >= 3) return upRight * 10;
+
+            return score;
+        }
+
+        function checkWin(board, player) {
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS - 3; col++) {
+                    if (board[row][col] === player && board[row][col+1] === player &&
+                        board[row][col+2] === player && board[row][col+3] === player) return true;
+                }
+            }
+
+            for (let row = 0; row < ROWS - 3; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col] === player && board[row+1][col] === player &&
+                        board[row+2][col] === player && board[row+3][col] === player) return true;
+                }
+            }
+
+            for (let row = 0; row < ROWS - 3; row++) {
+                for (let col = 0; col < COLS - 3; col++) {
+                    if (board[row][col] === player && board[row+1][col+1] === player &&
+                        board[row+2][col+2] === player && board[row+3][col+3] === player) return true;
+                }
+            }
+
+            for (let row = 3; row < ROWS; row++) {
+                for (let col = 0; col < COLS - 3; col++) {
+                    if (board[row][col] === player && board[row-1][col+1] === player &&
+                        board[row-2][col+2] === player && board[row-3][col+3] === player) return true;
+                }
+            }
+
+            return false;
+        }
+
+        function checkDraw(board) {
+            // Check if ALL cells in the entire board are filled (42 total)
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col] === 0) return false;
+                }
+            }
+            return true;
+        }
+
+        function highlightWinningCells() {
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS - 3; col++) {
+                    if (board[row][col] && board[row][col] === board[row][col+1] &&
+                        board[row][col] === board[row][col+2] && board[row][col] === board[row][col+3]) {
+                        for (let i = 0; i < 4; i++) highlightCell(row, col + i);
+                    }
+                }
+            }
+
+            for (let row = 0; row < ROWS - 3; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col] && board[row][col] === board[row+1][col] &&
+                        board[row][col] === board[row+2][col] && board[row][col] === board[row+3][col]) {
+                        for (let i = 0; i < 4; i++) highlightCell(row + i, col);
+                    }
+                }
+            }
+
+            for (let row = 0; row < ROWS - 3; row++) {
+                for (let col = 0; col < COLS - 3; col++) {
+                    if (board[row][col] && board[row][col] === board[row+1][col+1] &&
+                        board[row][col] === board[row+2][col+2] && board[row][col] === board[row+3][col+3]) {
+                        for (let i = 0; i < 4; i++) highlightCell(row + i, col + i);
+                    }
+                }
+            }
+
+            for (let row = 3; row < ROWS; row++) {
+                for (let col = 0; col < COLS - 3; col++) {
+                    if (board[row][col] && board[row][col] === board[row-1][col+1] &&
+                        board[row][col] === board[row-2][col+2] && board[row][col] === board[row-3][col+3]) {
+                        for (let i = 0; i < 4; i++) highlightCell(row - i, col + i);
+                    }
+                }
+            }
+        }
+
+        function highlightCell(row, col) {
+            const cells = document.querySelectorAll('.cell');
+            // When rendering: row ROWS-1 is first, row 0 is last
+            // So index = (ROWS - 1 - row) * COLS + col
+            const index = (ROWS - 1 - row) * COLS + col;
+            if (cells[index]) cells[index].classList.add('winning');
+        }
+
+        function showWinner(winner) {
+            let text, msg;
+            if (winner === 'player') { text = 'You Win!'; msg = 'Great job!'; }
+            else if (winner === 'computer') { text = 'Computer Wins!'; msg = 'Try again!'; }
+            else { text = "It's a Draw!"; msg = 'Well played!'; }
+
+            document.getElementById('status').textContent = text;
+            setTimeout(() => alert(text + '\n' + msg), 100);
+        }
+
+        function newGame() {
+            board = createBoard();
+            currentPlayer = PLAYER;
+            gameActive = true;
+            document.getElementById('status').textContent = "Your Turn!";
+            renderBoard();
+        }
+
+        function changeDifficulty() {
+            difficulty = document.getElementById('difficulty').value;
+            newGame();
+        }
+
+        board = createBoard();
+        renderBoard();
+    </script>
+</body>
+</html>

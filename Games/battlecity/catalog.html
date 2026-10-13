@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle City — Asset Catalog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #111; color: #eee; font-family: 'IBM Plex Mono', monospace; padding: 40px 20px 80px; }
+    nav { margin-bottom: 32px; font-size: 11px; color: #444; }
+    nav a { color: #f8e800; text-decoration: none; }
+    nav a:hover { text-decoration: underline; }
+    h1 {
+      font-family: 'Press Start 2P', monospace;
+      color: #f8e800;
+      font-size: 20px;
+      letter-spacing: 3px;
+      margin-bottom: 14px;
+      line-height: 1.4;
+    }
+    h1::after {
+      content: '';
+      display: block;
+      width: 48px;
+      height: 2px;
+      background: #f8e800;
+      margin-top: 12px;
+      margin-bottom: 20px;
+    }
+    h2 {
+      font-family: 'Press Start 2P', monospace;
+      color: #f8e800;
+      font-size: 11px;
+      letter-spacing: 2px;
+      margin: 40px 0 16px;
+      padding: 14px 16px;
+      background: #161616;
+      border-left: 3px solid #f8e800;
+    }
+    .section { margin-bottom: 40px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+    .item { background: #1a1a1a; padding: 15px; border-radius: 4px; text-align: center; border: 1px solid #2a2a2a; }
+    .item.wide { grid-column: span 2; }
+    .item.full { grid-column: 1 / -1; }
+    .item canvas { image-rendering: pixelated; background: #000; margin-bottom: 10px; border: 1px solid #111; }
+    .label { font-size: 12px; color: #aaa; margin-top: 5px; }
+    .tag { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; text-transform: uppercase; margin-bottom: 5px; }
+    .tag-spr { background: #440064; color: #fff; }
+    .tag-bg  { background: #083a00; color: #fff; }
+    /* SFX cards */
+    .sfx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+    .sfx-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+    .sfx-card .play-btn { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; background: #1a1a1a; border: 2px solid #f8e800; color: #f8e800; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.1s; }
+    .sfx-card .play-btn:hover { background: #f8e800; color: #000; }
+    .sfx-card .play-btn.playing { background: #f8e800; color: #000; }
+    .sfx-info { text-align: left; }
+    .sfx-name { font-size: 12px; color: #eee; font-weight: bold; }
+    .sfx-slot { font-size: 10px; color: #888; margin-top: 2px; }
+    /* Direction buttons */
+    .dir-btns { display: flex; gap: 3px; justify-content: center; margin: 6px 0 2px; }
+    .dir-btn { width: 22px; height: 22px; background: #1a1a1a; border: 1px solid #555; color: #888;
+               font-size: 13px; cursor: pointer; border-radius: 3px; display: flex; align-items: center;
+               justify-content: center; padding: 0; line-height: 1; }
+    .dir-btn:hover { border-color: #f8e800; color: #f8e800; }
+    .dir-btn.active { border-color: #f8e800; background: #2a2500; color: #f8e800; }
+  </style>
+</head>
+<body>
+  <nav><a href="index.html">← game</a> &nbsp;·&nbsp; <a href="reverse.html">ROM reverse engineering</a> &nbsp;·&nbsp; <a href="architecture.html">web port architecture</a></nav>
+
+  <h1>ASSET CATALOG</h1>
+
+  <div class="section">
+    <h2>PLAYERS &amp; ENEMIES</h2>
+    <div class="grid" id="gridEntities"></div>
+  </div>
+
+  <div class="section">
+    <h2>TERRAIN</h2>
+    <div class="grid" id="gridTerrain"></div>
+  </div>
+
+  <div class="section">
+    <h2>SPECIALS &amp; POWER-UPS</h2>
+    <div class="grid" id="gridSpecials"></div>
+  </div>
+
+  <div class="section">
+    <h2>HUD ELEMENTS</h2>
+    <div class="grid" id="gridHUD"></div>
+  </div>
+
+  <div class="section">
+    <h2>ANIMATIONS &amp; SFX</h2>
+    <div class="grid" id="gridAnims"></div>
+  </div>
+
+  <div class="section">
+    <h2>SOUNDS</h2>
+    <div class="sfx-grid" id="gridSounds"></div>
+  </div>
+
+<script>
+  const SCALE = 4;
+  const CHR_CELL = 9; // 8px + 1px border
+  const CHR_BORDER = 1;
+
+  // ROM-derived constants
+  // Nestopia NES 2C02 NTSC palette
+  const NES_MASTER_HEX = ['#7C7C7C','#0000FC','#0000BC','#4428BC','#940084','#A80020','#A81000','#881400','#503000','#007800','#006800','#005800','#004058','#000000','#000000','#000000','#BCBCBC','#0078F8','#0058F8','#6844FC','#D800CC','#E40058','#F83800','#E45C10','#AC7C00','#00B800','#00A800','#00A844','#008888','#000000','#000000','#000000','#F8F8F8','#3CBCFC','#6888FC','#9878F8','#F878F8','#F85898','#F87858','#FCA044','#F8B800','#B8F818','#58D854','#58F898','#00E8D8','#787878','#000000','#000000','#FCFCFC','#A4E4FC','#B8B8F8','#D8B8F8','#F8B8F8','#F8A4C0','#F0D0B0','#FCE0A8','#F8D878','#D8F878','#B8F8B8','#B8F8D8','#00FCFC','#F8D8F8','#000000','#000000'];
+  const ROM_PALETTE_DATA = [
+    [0x0F, 0x17, 0x06, 0x00], // 0 BG0 — border/HUD/brick
+    [0x0F, 0x3C, 0x10, 0x12], // 1 BG1 — water
+    [0x0F, 0x29, 0x09, 0x0B], // 2 BG2 — trees
+    [0x0F, 0x00, 0x10, 0x20], // 3 BG3 — steel/ice
+    [0x0F, 0x18, 0x27, 0x38], // 4 SP0 — player tank / UI elements (dark-tan/yellow-tan/cream)
+    [0x0F, 0x0A, 0x1B, 0x3B], // 5 SP1 — text / digits (yellow/off-white/white)
+    [0x0F, 0x0C, 0x10, 0x20], // 6 SP2 — enemies / power-ups / shield (dark-green/dark-gray/light-gray)
+    [0x0F, 0x04, 0x16, 0x20], // 7 SP3 — eagle / explosion / bonus tank (dark-purple/med-purple/light-gray)
+  ];
+
+  let currentPal = [];
+  let chrImg = null;
+  let frame = 0;
+
+  const tileCache = new Map();
+
+  function grayToIdx(r) { return r < 0x2B ? 0 : r < 0x7F ? 1 : r < 0xD5 ? 2 : 3; }
+
+  function buildPalette() {
+    currentPal = ROM_PALETTE_DATA.map(slot => slot.map(c => NES_MASTER_HEX[c & 0x3F]));
+  }
+  buildPalette();
+
+  function getCachedTile(tileAbs, palIdx, transparent) {
+    const key = `${tileAbs}_${palIdx}_${transparent ? 1 : 0}`;
+    if (tileCache.has(key)) return tileCache.get(key);
+
+    const tcol = tileAbs % 32, trow = (tileAbs / 32) | 0;
+    const sx = tcol * CHR_CELL + CHR_BORDER, sy = trow * CHR_CELL + CHR_BORDER;
+
+    const temp = document.createElement('canvas');
+    temp.width = 8; temp.height = 8;
+    const tctx = temp.getContext('2d');
+    tctx.drawImage(chrImg, sx, sy, 8, 8, 0, 0, 8, 8);
+    const pdata = tctx.getImageData(0, 0, 8, 8).data;
+
+    const pal = currentPal[palIdx];
+    const cached = document.createElement('canvas');
+    cached.width = 8 * SCALE; cached.height = 8 * SCALE;
+    const cctx = cached.getContext('2d');
+
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        const cidx = grayToIdx(pdata[(y * 8 + x) * 4]);
+        if (transparent && cidx === 0) continue;
+        cctx.fillStyle = pal[cidx];
+        cctx.fillRect(x * SCALE, y * SCALE, SCALE, SCALE);
+      }
+    }
+    tileCache.set(key, cached);
+    return cached;
+  }
+
+  function drawCHRTile(ctx, tileAbs, palIdx, dx, dy, transparent = false) {
+    if (!chrImg) return;
+    const cached = getCachedTile(tileAbs, palIdx, transparent);
+    ctx.drawImage(cached, dx, dy);
+  }
+
+  // Draw a 2×2 (16×16) metasprite.
+  // tiles = [top-left, top-right, bottom-left, bottom-right] CHR indices
+  // pt1 = true → sprite bank (+256 offset), false → BG bank (no offset)
+  function drawMetasprite(ctx, tiles, palIdx, pt1 = false) {
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    const cols = Math.round(ctx.canvas.width / (8 * SCALE));
+    tiles.forEach((t, i) => {
+      const abs = (pt1 ? 256 : 0) + t;
+      const ox = (i % cols) * 8 * SCALE, oy = Math.floor(i / cols) * 8 * SCALE;
+      drawCHRTile(ctx, abs, palIdx, ox, oy, true);
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Catalog data
+  // -------------------------------------------------------------------------
+
+  const CATALOG = {
+
+    // --- PLAYERS & ENEMIES ---
+    // Sprite bank (pt1:true). Tank formula: base + dir*8 + animBit.
+    // dirs: 0=UP, 1=LEFT, 2=DOWN, 3=RIGHT → base offsets 0x00/0x08/0x10/0x18
+    // P1 base=0x00, P2 base=0x00 (same tiles, diff palette); stars at $20/$40/$60.
+    // Enemy tier bases: T0=$80, T1=$A0, T2=$C0, T3=$E0. BONUS TANK same base as T0 but pal 7.
+    // tiles computed: T=base+dir*8 → [T, T+2, T+1, T+3]. dirIdx state drives display.
+    entityGroups: [
+      { name: "P1",         pal: 4, pt1: true, base: 0x00, dirIdx: 0 },
+      { name: "P1 ★1",     pal: 4, pt1: true, base: 0x20, dirIdx: 0 },
+      { name: "P1 ★2",     pal: 4, pt1: true, base: 0x40, dirIdx: 0 },
+      { name: "P1 ★3",     pal: 4, pt1: true, base: 0x60, dirIdx: 0 },
+      { name: "P2",         pal: 5, pt1: true, base: 0x00, dirIdx: 0 },
+      { name: "ENEMY T0",   pal: 6, pt1: true, base: 0x80, dirIdx: 0 },
+      { name: "ENEMY T1",   pal: 6, pt1: true, base: 0xA0, dirIdx: 0 },
+      { name: "ENEMY T2",   pal: 6, pt1: true, base: 0xC0, dirIdx: 0 },
+      { name: "ENEMY T3",   pal: 6, pt1: true, base: 0xE0, dirIdx: 0 },
+      { name: "BONUS TANK", pal: 7, pt1: true, base: 0x80, dirIdx: 0 },
+    ],
+
+    // --- TERRAIN ---
+    // BG bank (pt1:false). ROM TileCHRTable ($DB79, 64 bytes = 16×4): CHR ids [TL,TR,BL,BR].
+    // Partial brick types 0–3: two of four 8×8 quadrants = $0F (solid), other two = $00 (mortar).
+    // Partial steel types 5–8: two quads = $10 (solid steel), other two = $20 (open corner frame).
+    terrain: [
+      { name: "BRICK (FULL)",       pal: 0, tiles: [0x0F,0x0F,0x0F,0x0F], pt1: false }, // type4 $DB89
+      { name: "BRICK RIGHT COL",    pal: 0, tiles: [0x00,0x0F,0x00,0x0F], pt1: false }, // type0 $DB79: TR+BR
+      { name: "BRICK BOTTOM ROW",   pal: 0, tiles: [0x00,0x00,0x0F,0x0F], pt1: false }, // type1 $DB7D: BL+BR
+      { name: "BRICK LEFT COL",     pal: 0, tiles: [0x0F,0x00,0x0F,0x00], pt1: false }, // type2 $DB81: TL+BL
+      { name: "BRICK TOP ROW",      pal: 0, tiles: [0x0F,0x0F,0x00,0x00], pt1: false }, // type3 $DB85: TL+TR
+      { name: "STEEL (FULL)",       pal: 3, tiles: [0x10,0x10,0x10,0x10], pt1: false }, // type9 $DB9D
+      { name: "STEEL RIGHT COL",    pal: 3, tiles: [0x20,0x10,0x20,0x10], pt1: false }, // type5 $DB8D: TR+BR solid
+      { name: "STEEL BOTTOM ROW",   pal: 3, tiles: [0x20,0x20,0x10,0x10], pt1: false }, // type6 $DB91: BL+BR solid
+      { name: "STEEL LEFT COL",     pal: 3, tiles: [0x10,0x20,0x10,0x20], pt1: false }, // type7 $DB95: TL+BL solid
+      { name: "STEEL TOP ROW",      pal: 3, tiles: [0x10,0x10,0x20,0x20], pt1: false }, // type8 $DB99: TL+TR solid
+      { name: "WATER",              pal: 1, tiles: [0x12,0x12,0x12,0x12], pt1: false }, // type10 $DBA1
+      { name: "TREES",              pal: 2, tiles: [0x22,0x22,0x22,0x22], pt1: false }, // type11 $DBA5
+      { name: "ICE",                pal: 3, tiles: [0x21,0x21,0x21,0x21], pt1: false }, // type12 $DBA9
+      { name: "BORDER ($11)",       pal: 0, tiles: [0x11,0x11,0x11,0x11], pt1: false }, // ClearEntitySlots $D7CC fills entire nametable with $11
+    ],
+
+    // --- SPECIALS & POWER-UPS ---
+    // Eagle: BG bank, palette BG0 (attribute byte $00 from ClearNametableSlot; level loader never writes eagle area attribute).
+    // Power-ups: ODD OAM byte → PT1 (BG bank, no +256). Formula: $81+type*4. SP2=palIdx 6.
+    // Shield: ODD OAM tile $29/$2D → PT1 (BG bank). SP2=palIdx 6. ROM PlayerShieldDraw $E330.
+    specials: [
+      { name: "EAGLE INTACT",    pal: 0, tiles: [0xC8,0xCA,0xC9,0xCB], pt1: false }, // nametable BG metatile
+      { name: "EAGLE DESTROYED", pal: 0, tiles: [0xCC,0xCE,0xCD,0xCF], pt1: false }, // after hit
+      { name: "HELMET",          pal: 6, tiles: [0x80,0x82,0x81,0x83], pt1: false }, // type 0 $81+0*4=$81→$80-$83
+      { name: "TIMER",           pal: 6, tiles: [0x84,0x86,0x85,0x87], pt1: false }, // type 1
+      { name: "SHOVEL",          pal: 6, tiles: [0x88,0x8A,0x89,0x8B], pt1: false }, // type 2
+      { name: "STAR",            pal: 6, tiles: [0x8C,0x8E,0x8D,0x8F], pt1: false }, // type 3
+      { name: "GRENADE",         pal: 6, tiles: [0x90,0x92,0x91,0x93], pt1: false }, // type 4
+      { name: "1-UP",            pal: 6, tiles: [0x94,0x96,0x95,0x97], pt1: false }, // type 5 (LivesGrantCheck only)
+      { name: "TANK ($98)",      pal: 6, tiles: [0x98,0x9A,0x99,0x9B], pt1: false }, // type 6 extra life icon
+      // Score popup sprites — BG bank (PT1), palIdx 6 SP2.
+      // ROM DrawSpawnSprite ($DFB1): tile=($A8,X>>3&$FC)−$10+$B9 → 100/200/300/400 pts.
+      // ROM PowerUpCollision ($EB17): on pickup score+500, draw tiles $3A-$3D (PU flash).
+      { name: "SCORE 500 ($3A)", pal: 6, tiles: [0x3A,0x3C,0x3B,0x3D], pt1: false }, // power-up collection flash
+      { name: "SCORE 100 ($B8)", pal: 6, tiles: [0xB8,0xBA,0xB9,0xBB], pt1: false }, // basic enemy kill
+      { name: "SCORE 200 ($BC)", pal: 6, tiles: [0xBC,0xBE,0xBD,0xBF], pt1: false }, // fast enemy kill
+      { name: "SCORE 300 ($C0)", pal: 6, tiles: [0xC0,0xC2,0xC1,0xC3], pt1: false }, // power enemy kill
+      { name: "SCORE 400 ($C4)", pal: 6, tiles: [0xC4,0xC6,0xC5,0xC7], pt1: false }, // armor enemy kill
+      { name: "SHIELD F1",       pal: 6, tiles: [0x28,0x2A,0x29,0x2B], pt1: false }, // OAM tile $29 (odd→PT1)
+      { name: "SHIELD F2",       pal: 6, tiles: [0x2C,0x2E,0x2D,0x2F], pt1: false }, // OAM tile $2D (odd→PT1)
+      // Kill explosion / spawn-star frames — BG bank (PT1), palIdx 7 SP3.
+      // 7-phase kill sequence (states $7x→$1x): SMALL→MEDIUM→LARGE→EXPAND-A→EXPAND-B→LARGE→SMALL.
+      // Expand phases are ALSO used by EagleDrawIntact/EagleDrawDamaged ($E3E2/$E3EA) as the eagle HQ emblem overlay.
+      // (The eagle emblem is literally the expand-star sprite — same tiles, same 32×32 OAM grid.)
+      { name: "EXPL SMALL",     pal: 7, tiles: [0xF0,0xF2,0xF1,0xF3], pt1: false }, // T=$F1 (states $7x/$1x)
+      { name: "EXPL MEDIUM",    pal: 7, tiles: [0xF4,0xF6,0xF5,0xF7], pt1: false }, // T=$F5 (state $6x)
+      { name: "EXPL LARGE",     pal: 7, tiles: [0xF8,0xFA,0xF9,0xFB], pt1: false }, // T=$F9 (states $5x/$2x)
+      // Expand-star phases: DrawExpandSprite ($DFFA); OAM tile bytes all odd→PT1; 4×2 grid of 8×16 = 32×32px.
+      // State $4x → tiles $D1/$D5/$D9/$DD (odd) → PT1 $D0-$DD. Also = eagle intact overlay (EagleDrawIntact $69=0).
+      // State $3x → tiles $E1/$E5/$E9/$ED (odd) → PT1 $E0-$ED. Also = eagle damaged overlay (EagleDrawDamaged $69=$10).
+      { name: "EXPL EXPAND-A ($D0)", pal: 7, tiles: [0xD0,0xD2,0xD4,0xD6,0xD1,0xD3,0xD5,0xD7,0xD8,0xDA,0xDC,0xDE,0xD9,0xDB,0xDD,0xDF], pt1: false, w:32, h:32 }, // state $4x / eagle intact
+      { name: "EXPL EXPAND-B ($E0)", pal: 7, tiles: [0xE0,0xE2,0xE4,0xE6,0xE1,0xE3,0xE5,0xE7,0xE8,0xEA,0xEC,0xEE,0xE9,0xEB,0xED,0xEF], pt1: false, w:32, h:32 }, // state $3x / eagle damaged
+    ],
+
+    // --- HUD ELEMENTS ---
+    // BG bank (pt1:false). Attribute byte $00 for HUD col 7 → BG0 (palIdx 0). ROM session 52/53.
+    // Flag icon uses tiles $6C/$FC/$6D/$FD at nametable rows 23–24 cols 29–30. ROM $C7F8/$D225.
+    // Single 8×8 tiles: w:8, h:8 → canvas 32×32; tiles array has 1 element.
+    hud: [
+      { name: "ENEMY ICON ($6A)",   pal: 0, tiles: [0x6A],                     pt1: false, w:8, h:8 },
+      { name: "BLANK SLOT ($11)",   pal: 0, tiles: [0x11],                     pt1: false, w:8, h:8 },
+      { name: "LIFE TANK ($14)",    pal: 0, tiles: [0x14],                     pt1: false, w:8, h:8 },
+      { name: "STAGE FLAG",         pal: 0, tiles: [0x6C,0xFC,0x6D,0xFD],     pt1: false },
+      // ASCII digit tiles $30–$39: drawNesText maps charCode directly to BG tile index.
+      // ROM $D6D3 PPUQueueTiles writes ASCII codes to nametable; $D8F7 DrawSpriteString is separate.
+      { name: "DIGIT 0 ($30)",      pal: 0, tiles: [0x30], pt1: false, w:8, h:8 },
+      { name: "DIGIT 1 ($31)",      pal: 0, tiles: [0x31], pt1: false, w:8, h:8 },
+      { name: "DIGIT 2 ($32)",      pal: 0, tiles: [0x32], pt1: false, w:8, h:8 },
+      { name: "DIGIT 3 ($33)",      pal: 0, tiles: [0x33], pt1: false, w:8, h:8 },
+      { name: "DIGIT 4 ($34)",      pal: 0, tiles: [0x34], pt1: false, w:8, h:8 },
+      { name: "DIGIT 5 ($35)",      pal: 0, tiles: [0x35], pt1: false, w:8, h:8 },
+      { name: "DIGIT 6 ($36)",      pal: 0, tiles: [0x36], pt1: false, w:8, h:8 },
+      { name: "DIGIT 7 ($37)",      pal: 0, tiles: [0x37], pt1: false, w:8, h:8 },
+      { name: "DIGIT 8 ($38)",      pal: 0, tiles: [0x38], pt1: false, w:8, h:8 },
+      { name: "DIGIT 9 ($39)",      pal: 0, tiles: [0x39], pt1: false, w:8, h:8 },
+      // BG tiles $41–$5A = A–Z uppercase alphabet (p0=p1, solid white glyphs, ASCII-mapped: $41='A').
+      // Used by PPUQueueTiles ($D6D3) for all on-screen text strings (title, HUD, menus).
+      { name: "A–Z ($41–$5A)", pal: 0, tiles: [0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,0x4D,0x4E,0x4F,0x50,0x51,0x52,0x53,0x54,0x55,0x56,0x57,0x58,0x59,0x5A], pt1: false, w:208, h:8 },
+      // BG tiles $60–$68 = NAMCOT logo (9 tiles, monochrome pixel-art, plane-1=0 / color-1 only).
+      // Letter layout: N=$60-$61, A=$62, M=$63-$64, C=$65, O=$66, T=$67-$68 (N/M/T are 2-tile wide).
+      // ROM $D145 VictoryTileData: {$60..$68,$FF}.
+      // Drawn as one 9-tile BG row: title screen ($D28F), victory screen (col 12 row 14), stage-start (col 13 row 23).
+      { name: "NAMCOT ($60–$68)", pal: 0, tiles: [0x60,0x61,0x62,0x63,0x64,0x65,0x66,0x67,0x68], pt1: false, w:72, h:8 },
+      // Score header nametable tiles. ROM $D15B: Roman-I $5E + dash $6B at col 2–3 row 3;
+      // $D167 HI label $48/$49 at col 11–12; $D15E Roman-II $5F at col 21 (2P only).
+      // $5E = Roman numeral "I" (Serif capital I, player-1 selector; used in "I-PLAYER" $D2D9).
+      // $5F = Roman numeral "II" (Two vertical bars, player-2 selector; used in "II-PLAYER" $D2E2).
+      { name: "ROMAN \"I\" ($5E)",  pal: 0, tiles: [0x5E], pt1: false, w:8, h:8 },
+      { name: "ROMAN \"II\" ($5F)", pal: 0, tiles: [0x5F], pt1: false, w:8, h:8 },
+      { name: "HI 'H' ($48)",       pal: 0, tiles: [0x48], pt1: false, w:8, h:8 },
+      { name: "HI 'I' ($49)",       pal: 0, tiles: [0x49], pt1: false, w:8, h:8 },
+      // Score separator / col marker tile. ROM $D162/$D165.
+      { name: "SEPARATOR ($13)",    pal: 0, tiles: [0x13], pt1: false, w:8, h:8 },
+      // Copyright symbol tile. ROM $D1E5 copyright string "©1980 1985 NAMCO LTD".
+      { name: "© ($40)",            pal: 0, tiles: [0x40], pt1: false, w:8, h:8 },
+      // $5B = selection cursor (diamond/chevron pointer glyph). $5C = horizontal rule (two full-width bars).
+      // $5D = right-pointing arrow → (chevron glyph). Used on tally/result screens.
+      { name: "CURSOR ($5B)",       pal: 0, tiles: [0x5B], pt1: false, w:8, h:8 },
+      { name: "HORIZ RULE ($5C)",   pal: 0, tiles: [0x5C], pt1: false, w:8, h:8 },
+      { name: "ARROW → ($5D)",      pal: 0, tiles: [0x5D], pt1: false, w:8, h:8 },
+      // $69 = period/dot (2-pixel mark). Used after "NAMCO LTD" in copyright string ($D30D).
+      { name: "PERIOD ($69)",       pal: 0, tiles: [0x69], pt1: false, w:8, h:8 },
+      // $6B = dash "–" character (two centered horizontal bars, p0=p1=$7E).
+      // Used in "HI-SCORE", "I-PLAYER", "II-PLAYER" strings.
+      { name: "DASH \"–\" ($6B)",   pal: 0, tiles: [0x6B], pt1: false, w:8, h:8 },
+    ],
+
+    // --- ANIMATIONS ---
+    anims: [
+      { name: "SPAWN STAR",         type: "spawn" },
+      { name: "TANK EXPLOSION",     type: "explosion",  w: 32, h: 32 },
+      { name: "SHIELD BLINK",       type: "shield" },
+      { name: "BULLET EXP", type: "bullet_exp", dirIdx: 0 },
+      // GAME OVER banner sprite: PT1 tiles $78–$7F spell "GAME" (top 8px) + "OVER" (bottom 8px).
+      // ROM $C7CD DrawGameOverBanner: 4 OAM 8×16 entries side-by-side = 32×16px total (no alternation).
+      // GameOverBannerAnim ($C7F8) scrolls it in via HUDTankWiggleX/Y ($D2C6/$D2CA).
+      { name: "GAME/OVER BANNER",   type: "gameover_scroll", w: 32, h: 16 },
+    ],
+  };
+
+  // -------------------------------------------------------------------------
+  // Catalog rendering
+  // -------------------------------------------------------------------------
+
+  const DIR_LABELS = ['↑', '←', '↓', '→'];
+
+  function addDirButtons(div, item) {
+    const row = document.createElement('div');
+    row.className = 'dir-btns';
+    DIR_LABELS.forEach((sym, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'dir-btn' + (i === item.dirIdx ? ' active' : '');
+      btn.textContent = sym;
+      btn.addEventListener('click', () => {
+        item.dirIdx = i;
+        row.querySelectorAll('.dir-btn').forEach((b, j) => b.classList.toggle('active', j === i));
+      });
+      row.appendChild(btn);
+    });
+    div.appendChild(row);
+  }
+
+  // Entity groups: use base + dirIdx to compute tiles
+  function getEntityTiles(base, dirIdx) {
+    const T = base + dirIdx * 8;
+    return [T, T + 2, T + 1, T + 3];
+  }
+
+  function createEntitySection(id, groups) {
+    const container = document.getElementById(id);
+    groups.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'item';
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 16 * SCALE;
+      canvas.height = 16 * SCALE;
+      div.appendChild(canvas);
+
+      addDirButtons(div, item);
+
+      const tag = document.createElement('div');
+      tag.className = 'tag tag-spr';
+      tag.textContent = 'Sprite';
+      div.appendChild(tag);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'label';
+      lbl.textContent = item.name;
+      div.appendChild(lbl);
+
+      container.appendChild(div);
+      item.ctx = canvas.getContext('2d');
+    });
+  }
+
+  function createSection(id, list) {
+    const container = document.getElementById(id);
+    list.forEach(item => {
+      const div = document.createElement('div');
+      const iw = item.w || 16;
+      div.className = iw > 64 ? 'item full' : iw > 16 ? 'item wide' : 'item';
+
+      const canvas = document.createElement('canvas');
+      canvas.width  = (item.w || 16) * SCALE;
+      canvas.height = (item.h || 16) * SCALE;
+      div.appendChild(canvas);
+
+      // Direction buttons for directional anim items
+      if (item.dirIdx !== undefined) {
+        addDirButtons(div, item);
+      }
+
+      // Bank tag (skip for animations — they span banks)
+      if (item.tiles) {
+        const tag = document.createElement('div');
+        tag.className = `tag ${item.pt1 ? 'tag-spr' : 'tag-bg'}`;
+        tag.textContent = item.pt1 ? 'Sprite' : 'BG';
+        div.appendChild(tag);
+      }
+
+      const lbl = document.createElement('div');
+      lbl.className = 'label';
+      lbl.textContent = item.name;
+      div.appendChild(lbl);
+
+      container.appendChild(div);
+      item.ctx = canvas.getContext('2d');
+    });
+  }
+
+  function createCatalog() {
+    createEntitySection('gridEntities', CATALOG.entityGroups);
+    createSection('gridTerrain',  CATALOG.terrain);
+    createSection('gridSpecials', CATALOG.specials);
+    createSection('gridHUD',      CATALOG.hud);
+    createSection('gridAnims',    CATALOG.anims);
+  }
+
+  // -------------------------------------------------------------------------
+  // Animation loop
+  // -------------------------------------------------------------------------
+
+  function updateAll() {
+    frame++;
+
+    // --- Entities: tread animation toggles between animBit=0 and animBit=4 every 10 frames ---
+    const animOffset = (Math.floor(frame / 10) % 2) * 4;
+    CATALOG.entityGroups.forEach(item => {
+      const tiles = getEntityTiles(item.base, item.dirIdx);
+      drawMetasprite(item.ctx, tiles.map(t => t + animOffset), item.pal, item.pt1);
+    });
+
+    // --- Terrain: static ---
+    CATALOG.terrain.forEach(item => {
+      drawMetasprite(item.ctx, item.tiles, item.pal, item.pt1);
+    });
+
+    // --- Specials: static (shield frames shown separately) ---
+    CATALOG.specials.forEach(item => {
+      drawMetasprite(item.ctx, item.tiles, item.pal, item.pt1);
+    });
+
+    // --- HUD: static ---
+    CATALOG.hud.forEach(item => {
+      drawMetasprite(item.ctx, item.tiles, item.pal, item.pt1);
+    });
+
+    // --- Animations ---
+    CATALOG.anims.forEach(item => {
+      const ctx = item.ctx;
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+      if (item.type === "spawn") {
+        // ROM DrawShootSprite ($E0BF): 15-step triangle wave, BG bank tiles $A0-$AF, palIdx 7 SP3.
+        // Two 8×16 OAM entries side-by-side = 16×16 sprite. Duration ~30 frames (2 frames per step).
+        const SEQ = [0xAD,0xAD,0xA9,0xA9,0xA5,0xA5,0xA1,0xA1,0xA1,0xA5,0xA5,0xA9,0xA9,0xAD,0xAD];
+        const T = SEQ[Math.floor(frame / 4) % 15];
+        const tl = T & 0xFE, tr = (T + 2) & 0xFE;
+        drawCHRTile(ctx, tl,     7,           0,         0, true);
+        drawCHRTile(ctx, tl + 1, 7,           0, 8 * SCALE, true);
+        drawCHRTile(ctx, tr,     7, 8 * SCALE,  0,          true);
+        drawCHRTile(ctx, tr + 1, 7, 8 * SCALE, 8 * SCALE,  true);
+
+      } else if (item.type === "explosion") {
+        // Full kill-explosion sequence (7 phases, 6 frames each). Canvas is 32×32.
+        // ROM DrawDispatchLoop ($DF60): state transitions $73→$00.
+        // Phases 0,1,6 = 16×16 centered; phases 2,3,4,5 = 32×32. BG bank, palIdx 7.
+        const phase = Math.floor(frame / 6) % 7;
+        const cenX = 8 * SCALE, cenY = 8 * SCALE; // offset to center a 16×16 on a 32×32 canvas
+        if (phase === 0 || phase === 6) {
+          // Small 16×16: T=$F1 → tl=$F0, tr=$F2, bl=$F1, br=$F3
+          drawCHRTile(ctx, 0xF0, 7, cenX,              cenY,              true);
+          drawCHRTile(ctx, 0xF2, 7, cenX + 8 * SCALE,  cenY,              true);
+          drawCHRTile(ctx, 0xF1, 7, cenX,              cenY + 8 * SCALE,  true);
+          drawCHRTile(ctx, 0xF3, 7, cenX + 8 * SCALE,  cenY + 8 * SCALE,  true);
+        } else if (phase === 1 || phase === 5) {
+          // Medium 16×16: T=$F5 → $F4/$F6/$F5/$F7
+          drawCHRTile(ctx, 0xF4, 7, cenX,              cenY,              true);
+          drawCHRTile(ctx, 0xF6, 7, cenX + 8 * SCALE,  cenY,              true);
+          drawCHRTile(ctx, 0xF5, 7, cenX,              cenY + 8 * SCALE,  true);
+          drawCHRTile(ctx, 0xF7, 7, cenX + 8 * SCALE,  cenY + 8 * SCALE,  true);
+        } else if (phase === 2 || phase === 4) {
+          // Large 16×16: T=$F9 → $F8/$FA/$F9/$FB, centered on 32×32
+          drawCHRTile(ctx, 0xF8, 7, cenX,              cenY,              true);
+          drawCHRTile(ctx, 0xFA, 7, cenX + 8 * SCALE,  cenY,              true);
+          drawCHRTile(ctx, 0xF9, 7, cenX,              cenY + 8 * SCALE,  true);
+          drawCHRTile(ctx, 0xFB, 7, cenX + 8 * SCALE,  cenY + 8 * SCALE,  true);
+        } else {
+          // 32×32 expand sprite (phase 3): entity states $30-$3F → DrawExpandSprite ($DFFA) → BG tiles $E0-$ED.
+          // Formula: ($A0,X & $F0) - $30 XOR $10 + (A*4+$D1); for state_hi=$3: (0 XOR $10)+$D1=$E1 → tiles $E0-$ED.
+          const base = 0xE0;
+          for (let row = 0; row < 4; row++)
+            for (let col = 0; col < 4; col++)
+              drawCHRTile(ctx, base + col*2 + (row&1) + (row>>1)*8, 7,
+                          col * 8 * SCALE, row * 8 * SCALE, true);
+        }
+
+      } else if (item.type === "shield") {
+        // ROM PlayerShieldDraw ($E330): alternates OAM tile $29/$2D on $0B&$02 (every 2 frames).
+        // $29/$2D are ODD → PT1 (BG bank, no +256). Palette SP2 = palIdx 6.
+        const f2 = Math.floor(frame / 16) % 2;
+        const tiles = f2 === 0
+          ? [0x28, 0x2A, 0x29, 0x2B]  // OAM tile $29 → top-left=$28, top-right=$2A, bl=$29, br=$2B
+          : [0x2C, 0x2E, 0x2D, 0x2F]; // OAM tile $2D → top-left=$2C, top-right=$2E, bl=$2D, br=$2F
+        tiles.forEach((t, i) => {
+          const ox = (i % 2) * 8 * SCALE, oy = Math.floor(i / 2) * 8 * SCALE;
+          drawCHRTile(ctx, t, 6, ox, oy, true);
+        });
+
+      } else if (item.type === "bullet_exp") {
+        // ROM BulletExplode ($E1AF): single 8×16 OAM entry, tile $B1+dir*2 (ODD → PT1 = BG bank).
+        // Top = T&$FE, bottom = top+1. Centered horizontally on 16×16 canvas.
+        const T = 0xB1 + item.dirIdx * 2;
+        const top = T & 0xFE;
+        const cx = 4 * SCALE; // center 8px tile in 16px canvas
+        drawCHRTile(ctx, top,     7, cx,  0,         true);
+        drawCHRTile(ctx, top + 1, 7, cx,  8 * SCALE, true);
+
+      } else if (item.type === "gameover_scroll") {
+        // ROM $C7CD DrawGameOverBanner: always draws all 8 tiles ($78–$7F), no alternation.
+        // Tiles $78–$7B = "GAME" letter columns (top 8px each), $7C–$7F = "OVER" letter columns (bottom 8px).
+        for (let col = 0; col < 4; col++) {
+          drawCHRTile(ctx, 0x78 + col * 2,     7, col * 8 * SCALE, 0,         true);
+          drawCHRTile(ctx, 0x78 + col * 2 + 1, 7, col * 8 * SCALE, 8 * SCALE, true);
+        }
+      }
+    });
+
+    requestAnimationFrame(updateAll);
+  }
+
+  chrImg = new Image();
+  chrImg.src = 'tiles/chr_all.png';
+  chrImg.onload = () => {
+    createCatalog();
+    updateAll();
+  };
+
+</script>
+
+<script src="sound.js"></script>
+<script>
+  // ─── SFX Catalog ────────────────────────────────────────────────
+  // Each entry: { name, slotDesc, play: fn }
+  const SFX_CATALOG = [
+    { name: "Pause Toggle",   slotDesc: "slot 0 $EE2C",         play: () => { playSound(SND.PAUSE); } },
+    { name: "Player Fire",    slotDesc: "slot 15 $EE12 (sweep)", play: () => { playSound(SND.PLAYER_FIRE); } },
+    { name: "Enemy Fire",     slotDesc: "slot 16 $EE95",        play: () => { playSound(SND.ENEMY_FIRE); } },
+    { name: "Brick Hit",      slotDesc: "slot 12 $EE5E",        play: () => { playSound(SND.BRICK_HIT); } },
+    { name: "Steel Hit",      slotDesc: "slot 13 $EE56",        play: () => { playSound(SND.STEEL_HIT); } },
+    { name: "Armor Hit",      slotDesc: "slot 14 $EE67",        play: () => { playSound(SND.ARMOR_HIT); } },
+    { name: "Entity Kill",    slotDesc: "slots 10+7",           play: () => { playSound(SND.ENTITY_KILL); playSound(SND.EXPLOSION); } },
+    { name: "Eagle Hit",      slotDesc: "slot 11 $EDF4",        play: () => { playSound(SND.EAGLE_HIT); } },
+    { name: "Power-Up Appear",slotDesc: "slot 9 $EE48",         play: () => { playSound(SND.POWERUP_APPEAR); } },
+    { name: "Power-Up Collect",slotDesc:"slot 6 $EE19",         play: () => { playSound(SND.POWERUP_COLLECT); } },
+    { name: "Life Up",        slotDesc: "slot 4 $EE9F",         play: () => { playSound(SND.LIFE_UP_P1); } },
+    { name: "Tank Engine",    slotDesc: "slot 17 $EE8C (loops)", play: () => { playSound(SND.TANK_ENGINE); } },
+    { name: "Eagle Alarm",    slotDesc: "slot 18 $EE82 (loops)", play: () => { playSound(SND.EAGLE_ALARM); } },
+    { name: "Tally Tick",     slotDesc: "slots 19+20",          play: () => { playSound(SND.TALLY_TICK); playSound(SND.TALLY_TICK2); } },
+    { name: "Tally Done",     slotDesc: "slot 27 $EE3A",        play: () => { playSound(SND.TALLY_DONE); } },
+    { name: "Stage Clear",    slotDesc: "slots 21-23",          play: () => { playSound(SND.STAGE_CLEAR1); playSound(SND.STAGE_CLEAR2); playSound(SND.STAGE_CLEAR3); } },
+    { name: "Victory",        slotDesc: "slots 24-26",          play: () => { playSound(SND.VICTORY1); playSound(SND.VICTORY2); playSound(SND.VICTORY3); } },
+    { name: "BGM (one-shot)", slotDesc: "slots 1-3",            play: () => { playSound(SND.BGM_SQ1); playSound(SND.BGM_TRI); playSound(SND.BGM_SQ2); } },
+  ];
+
+  let sfxAudioInited = false;
+  function ensureAudio() {
+    if (!sfxAudioInited) { initAudio(); sfxAudioInited = true; }
+  }
+
+  // Build SFX grid
+  const sfxGrid = document.getElementById('gridSounds');
+  SFX_CATALOG.forEach(entry => {
+    const card = document.createElement('div');
+    card.className = 'sfx-card';
+
+    const btn = document.createElement('button');
+    btn.className = 'play-btn';
+    btn.innerHTML = '&#9654;';
+    btn.title = 'Play ' + entry.name;
+    btn.addEventListener('click', () => {
+      ensureAudio();
+      stopAllSounds();
+      entry.play();
+      btn.classList.add('playing');
+      // Remove playing highlight after ~2s
+      clearTimeout(btn._t);
+      btn._t = setTimeout(() => btn.classList.remove('playing'), 2000);
+    });
+
+    const info = document.createElement('div');
+    info.className = 'sfx-info';
+    info.innerHTML = `<div class="sfx-name">${entry.name}</div><div class="sfx-slot">${entry.slotDesc}</div>`;
+
+    card.appendChild(btn);
+    card.appendChild(info);
+    sfxGrid.appendChild(card);
+  });
+
+  // Tick the sound engine at 60fps so sequences advance
+  setInterval(() => { if (sfxAudioInited) soundTick(); }, 1000 / 60);
+</script>
+</body>
+</html>

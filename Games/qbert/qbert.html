@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q*bert arcade game</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <style>
+        @font-face {
+            font-family: 'NK57 Monospace Sc Sb';
+            src: url('fonts/NK57MonospaceScSb-Regular.woff2') format('woff2'),
+                url('fonts/NK57MonospaceScSb-Regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Source Code Pro';
+            src: url('fonts/SourceCodePro-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        #options {
+            width: 300px;
+            display: inline-block;
+            vertical-align: top;
+        }
+        .arrow-button {
+            display: inline-block;
+            background-color: white;
+            background-image: url("%%SPRITE:arrow.png%%");
+            height: 100px;
+            width: 100px;
+            border: none;
+            color: transparent;
+        }
+        .buttons-div {
+            width: 210px;
+            display: inline-block;
+            vertical-align: top;
+        }
+        .arrow-button:nth-of-type(1) {
+            transform: rotate(-90deg);
+        }
+        .arrow-button:nth-of-type(3) {
+            transform: rotate(180deg);
+        }
+        .arrow-button:nth-of-type(4) {
+            transform: rotate(90deg);
+        }
+    </style>
+</head>
+<body onload="startGame()">
+    <div style="display: none; font-family: 'NK57 Monospace Sc Sb';">
+        <img id="qbertLogo" data-sprite="QBert-Logo.png" src="">
+        <img id="levelNumbers" data-sprite="level_numbers.png" src="">
+        <img id="qbertFont" data-sprite="qbert_font.png" src="">
+        <img id="qbertSprite" data-sprite="qbert_sprite.png" src="">
+        <img id="ballsSprite" data-sprite="balls_sprite.png" src="">
+        <img id="coilySprite" data-sprite="coily_sprite.png" src="">
+        <img id="slickSprite" data-sprite="slick_sprite.png" src="">
+        <img id="samSprite" data-sprite="sam_sprite.png" src="">
+        <img id="wrongwaySprite" data-sprite="wrongway-sprite.png" src="">
+        <img id="uggSprite" data-sprite="ugg_sprite.png" src="">
+        <img id="swear" data-sprite="qbert_swear.png" src="">
+        <img id="life" data-sprite="life.png" src="">
+    </div>
+    <canvas id="qbert-canvas" height="820" width="768"></canvas>
+    <div class="buttons-div">
+        <input class="arrow-button" id="button-left" type="button" value="left" />
+        <input class="arrow-button" id="button-up" type="button" value="up" />
+        <input class="arrow-button" id="button-down" type="button" value="down" />
+        <input class="arrow-button" id="button-right" type="button" value="right" />
+    </div>
+    <div id="options">
+        <input id="addCoinButton" type="button" value="Add a coin"/><br/>
+        <input id="onePlayerStart" type="button" value="1 player start"/><br/>
+        <input id="twoPlayerStart" type="button" value="2 player start"/><br/>
+        <label for="canvasWidth">Canvas width (px) : </label><br/>
+        <input id="canvasWidth" name="canvasWidth" value="768"/><br/>
+        <label for="canvasHeight">Canvas height (px) : </label><br/>
+        <input id="canvasHeight" name="canvasHeight" value="820"/><br/>
+        <label for="nbLevels">Number of levels : </label><br/>
+        <input id="nbLevels" name="nbLevels" value="7"/><br/>
+        <label for="cubeSize">Cube size (px): </label><br/>
+        <input id="cubeSize" name="cubeSize" value="50"/><br/>
+        <label for="cubeHeight">Cube height (px): </label><br/>
+        <input id="cubeHeight" name="cubeHeight" value="50"/><br/>
+        <label for="qbertStartLevel">Qbert start level : </label><br/>
+        <input id="qbertStartLevel" name="qbertStartLevel" value="1"/><br/>
+        <label for="qbertStartBlock">Qbert start block : </label><br/>
+        <input id="qbertStartBlock" name="qbertStartBlock" value="1"/><br/>
+        <label for="colorLeft">Left side color : </label><br/>
+        <input id="colorLeft" name="colorLeft" value="#633100"/><br/>
+        <label for="colorRight">Right side color : </label><br/>
+        <input id="colorRight" name="colorRight" value="#ff721c"/><br/>
+        <label for="colorTop">Top side color : </label><br/>
+        <input id="colorTop" name="colorTop" value="#ebdc7d"/><br/>
+        <label for="colorBackground">Background color : </label><br/>
+        <input id="colorBackground" name="colorBackground" value="#000"/><br/>
+        <label for="colorFrame">Frame color : </label><br/>
+        <input id="colorFrame" name="colorFrame" value="#000"/><br/>
+        <label for="qbertColorPalette">Color palette :</label><br/>
+        <select id="qbertColorPalette" name="qbertColorPalette"></select><br/>
+        <label for="qbertColorPaletteTop">Top side color palette :</label><br/>
+        <select id="qbertColorPaletteTop" name="qbertColorPaletteTop"></select><br/>
+        <label for="qbertLevel">Level selected :</label><br/>
+        <select id="qbertLevel" name="qbertLevel">
+        </select><br/>
+        <label for="qbertRound">Round selected :</label><br/>
+        <select id="qbertRound" name="qbertRound">
+        </select><br/>
+        <label for="qbertLevelType">Type of gameplay :</label><br/>
+        <select id="qbertLevelType" name="qbertLevelType">
+            <option value="1">Level #1</option>
+            <option value="2">Level #2</option>
+            <option value="3">Level #3</option>
+            <option value="4">Level #4</option>
+            <option value="5">Level #5</option>
+        </select><br/>
+        <label for="sceneSelection">Current scene :</label><br/>
+        <select id="sceneSelection" name="sceneSelection">
+            <option value="title">Title scene</option>
+            <option value="instructions">Instructions scene</option>
+            <option value="demo">Demo scene</option>
+            <option value="highscores">High scores scene</option>
+            <option value="main">Main game scene</option>
+            <option value="level">New level scene</option>
+            <option value="entername">Enter your name scene</option>
+        </select><br/>
+        <label for="currentPlayer">Current player :</label><br/>
+        <select id="currentPlayer" name="currentPlayer">
+            <option value="0">Player 1</option>
+            <option value="1">Player 2</option>
+        </select><br/>
+        <label for="nbCredits">Number of credits : </label><br/>
+        <input id="nbCredits" name="nbCredits" value="0"/><br/>
+    </div>
+    
+<script src="sprites_0.js"></script>
+<script src="sprites_1.js"></script>
+<script>
+(function(){
+  var S = window.QBERT_SPRITES || {};
+  document.querySelectorAll('img[data-sprite]').forEach(function(img){
+    if (S[img.dataset.sprite]) img.src = S[img.dataset.sprite];
+  });
+  // fix CSS background-image placeholders
+  var walker = document.createTreeWalker(document.head, NodeFilter.SHOW_TEXT);
+  // simpler: rewrite style tags
+  document.querySelectorAll('style').forEach(function(st){
+    var css = st.textContent;
+    Object.keys(S).forEach(function(fn){
+      css = css.split('%%SPRITE:'+fn+'%%').join(S[fn]);
+    });
+    st.textContent = css;
+  });
+})();
+</script>
+<script src="qbert-game.js"></script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle City — Web Port Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #111;
+      color: #ccc;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 40px 20px 80px;
+    }
+    .page { max-width: 860px; margin: 0 auto; }
+    nav { margin-bottom: 32px; font-size: 11px; color: #444; }
+    nav a { color: #f8e800; text-decoration: none; }
+    nav a:hover { text-decoration: underline; }
+    h1 {
+      font-family: 'Press Start 2P', monospace;
+      color: #f8e800;
+      font-size: 20px;
+      letter-spacing: 3px;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    h1::after {
+      content: '';
+      display: block;
+      width: 48px;
+      height: 2px;
+      background: #f8e800;
+      margin-top: 12px;
+    }
+    .subtitle { color: #555; font-size: 11px; margin-bottom: 36px; margin-top: 6px; }
+    h2 {
+      font-family: 'Press Start 2P', monospace;
+      color: #f8e800;
+      font-size: 11px;
+      letter-spacing: 2px;
+      margin: 40px 0 16px;
+      padding: 14px 16px;
+      background: #161616;
+      border-left: 3px solid #f8e800;
+    }
+    h3 { color: #aaa; font-size: 12px; margin: 20px 0 8px; }
+    p { margin-bottom: 10px; color: #999; }
+    a { color: #f8e800; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 12px; }
+    th { text-align: left; color: #555; font-weight: normal; border-bottom: 1px solid #222; padding: 6px 10px 6px 0; }
+    td { padding: 6px 10px 6px 0; color: #aaa; border-bottom: 1px solid #1a1a1a; vertical-align: top; }
+    td:first-child { color: #f8e800; white-space: nowrap; }
+    code { background: #1a1a1a; color: #f0a060; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+    .note { background: #161616; border-left: 3px solid #333; padding: 12px 16px; margin: 16px 0; color: #666; font-size: 12px; }
+    ul { margin: 8px 0 14px 18px; color: #888; }
+    li { margin-bottom: 4px; }
+    .files { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+    .file { background: #161616; border: 1px solid #222; border-radius: 4px; padding: 12px 16px; }
+    .file-name { color: #f8e800; font-size: 12px; margin-bottom: 4px; font-family: 'Press Start 2P', monospace; font-size: 10px; }
+    .file-desc { color: #666; font-size: 11px; }
+    .loop { background: #161616; border: 1px solid #222; border-radius: 4px; padding: 16px 18px; margin: 12px 0; font-size: 12px; color: #888; }
+    .loop .step { display: flex; gap: 12px; margin-bottom: 6px; }
+    .loop .step:last-child { margin-bottom: 0; }
+    .loop .num { color: #f8e800; min-width: 20px; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav><a href="index.html">← game</a> &nbsp;·&nbsp; <a href="reverse.html">ROM reverse engineering</a> &nbsp;·&nbsp; <a href="catalog.html">asset catalog</a></nav>
+
+  <h1>WEB PORT ARCHITECTURE</h1>
+  <p class="subtitle">Plain HTML + Canvas — no build tools, no frameworks</p>
+
+  <h2>FILES</h2>
+  <div class="files">
+    <div class="file">
+      <div class="file-name">game.js</div>
+      <div class="file-desc">~2,550 lines. All game logic, rendering, input, and audio orchestration. Single file, no imports.</div>
+    </div>
+    <div class="file">
+      <div class="file-name">levels.js</div>
+      <div class="file-desc">35 decoded stage maps as JS arrays — one 13×13 tile-type grid per stage, extracted from ROM.</div>
+    </div>
+    <div class="file">
+      <div class="file-name">sound.js</div>
+      <div class="file-desc">Web Audio API synthesizer. Recreates 2A03 square/noise channels for all SFX.</div>
+    </div>
+    <div class="file">
+      <div class="file-name">tiles/chr_all.png</div>
+      <div class="file-desc">Full 8 KB CHR-ROM decoded to PNG. 32×16 grid of 8×8 tiles (9px cells with 1px border). BG bank tiles 0–255, sprite bank 256–511.</div>
+    </div>
+    <div class="file">
+      <div class="file-name">index.html</div>
+      <div class="file-desc">Game shell. Canvas wrapped in a clipping div that hides 8px top/bottom to replicate NTSC CRT overscan.</div>
+    </div>
+    <div class="file">
+      <div class="file-name">catalog.html</div>
+      <div class="file-desc">Visual reference: all metasprites, terrain tiles, palettes, and SFX playback — rendered live from chr_all.png.</div>
+    </div>
+  </div>
+
+  <h2>COORDINATE SYSTEM</h2>
+  <p>All game logic runs in NES pixel space (256×240). A single <code>SCALE</code> constant (= 3) maps NES pixels to CSS pixels at render time. Changing it resizes everything without touching any game code.</p>
+  <table>
+    <tr><th>Constant</th><th>Value</th><th>Meaning</th></tr>
+    <tr><td><code>NES_W / NES_H</code></td><td>256 / 240</td><td>Full NES PPU output size</td></tr>
+    <tr><td><code>SCALE</code></td><td>3</td><td>CSS pixels per NES pixel</td></tr>
+    <tr><td><code>FX / FY</code></td><td>16 / 16</td><td>Playfield top-left in NES pixels (2-tile border)</td></tr>
+    <tr><td><code>GW / GH</code></td><td>13 / 13</td><td>Playfield width/height in metatiles</td></tr>
+    <tr><td><code>META</code></td><td>16</td><td>Pixels per metatile (2×2 CHR tiles)</td></tr>
+    <tr><td><code>TANK_SZ</code></td><td>16</td><td>Tank sprite size in NES pixels</td></tr>
+  </table>
+  <div class="note">Tank and bullet positions are stored as the sprite center in NES pixels. Collision probes use the leading-edge corners, mirroring the ROM's <code>MoveGridSnap</code> routine.</div>
+
+  <h2>RENDER PIPELINE</h2>
+  <p>The renderer faithfully reproduces the NES PPU pipeline order: background first, then sprites on top.</p>
+
+  <h3>CHR tile engine</h3>
+  <ul>
+    <li><code>chr_all.png</code> is loaded once into an offscreen canvas (<code>chrOff</code>)</li>
+    <li><code>drawCHRTile(tileAbs, palIdx, x, y)</code> — reads an 8×8 pixel block from the sheet, applies the NES palette, writes into a scaled cached canvas, then blits to the main canvas</li>
+    <li>Tile cache keyed by <code>"tileAbs_palIdx_transparent"</code> — avoids re-processing identical tiles</li>
+    <li><code>drawMetatile</code> composes 4 CHR tiles into a 16×16 BG metatile</li>
+    <li><code>drawSprite16</code> composes two 8×16 OAM entries into a 16×16 metasprite, with transparency (color-0 = skip)</li>
+  </ul>
+
+  <h3>Palette system</h3>
+  <ul>
+    <li>9 background palette sets extracted from ROM <code>$D565 BGPaletteTable</code> — indexed by <code>palSet</code></li>
+    <li>Fixed sprite palettes from ROM <code>$D555 SpritePaletteData</code></li>
+    <li>All palette entries map through the Nestopia NTSC master palette (846 entries covering all 64 NES color indices)</li>
+    <li>Active palette set switches on water animation (every 32 frames), title screen, game-over, and grenade/shovel flash</li>
+  </ul>
+
+  <h3>Per-frame render order</h3>
+  <div class="loop">
+    <div class="step"><span class="num">1</span><span>Fill border regions (gray tile $FC)</span></div>
+    <div class="step"><span class="num">2</span><span>Fill playfield black (<code>C.FIELD</code>)</span></div>
+    <div class="step"><span class="num">3</span><span>Draw all 13×13 terrain metatiles (brick with sub-quadrant masking, steel, trees, water, ice)</span></div>
+    <div class="step"><span class="num">4</span><span>Draw eagle sprite</span></div>
+    <div class="step"><span class="num">5</span><span>Draw power-up sprite (if active)</span></div>
+    <div class="step"><span class="num">6</span><span>Draw entity sprites — tanks (CHR metasprites), spawn animation, death explosion</span></div>
+    <div class="step"><span class="num">7</span><span>Draw bullet sprites</span></div>
+    <div class="step"><span class="num">8</span><span>Draw trees overlay (painted after tanks so trees appear in front)</span></div>
+    <div class="step"><span class="num">9</span><span>Draw HUD — right panel: enemy tank icons, player lives, stage number</span></div>
+    <div class="step"><span class="num">10</span><span>Draw overlays — shield glint, GAME OVER scroll, grenade flash, freeze indicator</span></div>
+  </div>
+
+  <h2>GAME LOOP</h2>
+  <p>Runs via <code>requestAnimationFrame</code> locked to 60 fps. Each tick: read input → update all subsystems → render.</p>
+  <table>
+    <tr><th>Subsystem</th><th>ROM reference</th><th>Notes</th></tr>
+    <tr><td>Input</td><td><code>$9689 ReadControllers</code></td><td>Keyboard → D-pad + A/B; gamepad API supported</td></tr>
+    <tr><td>Entity movement</td><td><code>$DD30 MoveGridSnap</code></td><td>8px snap grid; leading-edge collision probes</td></tr>
+    <tr><td>AI</td><td><code>$DC7C EntityMovementAI</code></td><td>Hardcoded direction sequences + target seeking</td></tr>
+    <tr><td>Firing</td><td><code>$E162 EnemyFireTick</code></td><td>1/32 chance per frame per enemy; player fire on button press</td></tr>
+    <tr><td>Bullet movement</td><td><code>$E604 BulletTerrainCollision</code></td><td>4 px/frame; nametable shadow read for tile type</td></tr>
+    <tr><td>Bullet–entity hit</td><td><code>$E70C EnemyBulletPlayerCollision</code></td><td>Proximity ≤ 10px; armor hit counting</td></tr>
+    <tr><td>Bullet–bullet cancel</td><td>—</td><td>Opposing bullets within 8px destroy each other</td></tr>
+    <tr><td>Power-ups</td><td><code>$EA7E</code></td><td>6 types; spawned on kill of flagged enemy</td></tr>
+    <tr><td>Shield / freeze</td><td>—</td><td>Frame-count timers; freeze stops all enemy movement and AI</td></tr>
+    <tr><td>Spawn animation</td><td><code>$DDA0</code></td><td>Cycling tile pattern over ~60 frames before tank appears</td></tr>
+    <tr><td>Death animation</td><td><code>$DE64 DeathAnimTick</code></td><td>Expanding ring of colored rects, 4 phases</td></tr>
+    <tr><td>Stage clear</td><td><code>$C728 CheckGameOver</code></td><td>All 20 enemies defeated → victory scroll</td></tr>
+    <tr><td>Game over</td><td><code>$C728 CheckGameOver</code></td><td>Eagle destroyed or all lives lost → GAME OVER sprite scroll</td></tr>
+  </table>
+
+  <h2>BRICK DESTRUCTION MODEL</h2>
+  <p>Each metatile cell stores a 4-bit mask (<code>brickBits</code>) representing which 8×8 quadrants remain: TL=bit0, TR=bit1, BL=bit2, BR=bit3. When a bullet hits, the mask for the struck quadrant(s) is cleared. The tile is re-classified based on which bits remain:</p>
+  <ul>
+    <li>All bits 0 → <code>EMPTY</code></li>
+    <li>Only right column bits → <code>BRICK_R</code></li>
+    <li>Only bottom row bits → <code>BRICK_B</code></li>
+    <li>Only left column bits → <code>BRICK_L</code></li>
+    <li>Only top row bits → <code>BRICK_T</code></li>
+  </ul>
+  <p>This exactly mirrors the ROM's <code>$D745 SubTileBitmask</code> system.</p>
+
+  <h2>SOUND</h2>
+  <p>All sound effects are synthesized at runtime using the Web Audio API — no audio files. Each SFX recreates the 2A03 channel behavior:</p>
+  <ul>
+    <li><strong>Square channels</strong> — used for engine idle hum, bullet fire, explosions, power-up jingle</li>
+    <li><strong>Noise channel</strong> — used for explosion rumble</li>
+    <li>SFX are triggered by boolean flags mirroring ROM RAM addresses <code>$030B–$030D</code></li>
+    <li>Engine sound plays continuously while a tank is moving, stops when idle</li>
+  </ul>
+
+  <h2>CONSTRUCTION MODE</h2>
+  <p>A level editor (Famicom-exclusive feature) is implemented as a game state. The 13×13 grid is editable with cursor navigation; the current tile type cycles through all terrain types. Custom maps are stored in JS memory and passed directly to the stage loader — no serialization.</p>
+
+  <h2>FIDELITY NOTES</h2>
+  <ul>
+    <li>All 35 stage maps decoded from ROM nibble table and verified tile-by-tile</li>
+    <li>Eagle wall geometry (Π-shape, 5 metatile cells) confirmed against pixel-position analysis of ROM nametable writes</li>
+    <li>Enemy spawn positions (3 fixed spawn points), player spawn positions, and eagle position are hardcoded ROM values</li>
+    <li>Spawn delay formula: <code>max(50, 186 − stageIndex × 4 − (2P ? 20 : 0))</code> frames — ROM <code>$C3A2: $BE − stage × 4</code>; 2P penalty <code>$C3B0: SBC #$14</code></li>
+    <li>Enemy type distribution per stage from ROM <code>$EA51 EnemyTypeTable</code> (20 entries per stage)</li>
+    <li>Score values per tank type match ROM <code>$D9E1 SetupScoreDigits</code> BCD encoding</li>
+    <li>NTSC overscan (8px top/bottom) replicated via CSS clip on the canvas wrapper</li>
+  </ul>
+</div>
+</body>
+</html>

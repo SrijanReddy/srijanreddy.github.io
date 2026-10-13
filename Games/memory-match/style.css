@@ -1,0 +1,309 @@
+:root {
+  --color-bg: #f0ece3;
+  --color-card-back: #2c3e50;
+  --color-card-front: #ffffff;
+  --color-accent: #2a9d8f;
+  --color-accent-glow: rgba(42, 157, 143, 0.4);
+  --color-text: #2c3e50;
+  --color-text-light: #6c757d;
+  --color-star: #e9c46a;
+  --color-star-empty: #ccc;
+  --color-modal-bg: rgba(0, 0, 0, 0.6);
+  --card-size: 120px;
+  --card-gap: 12px;
+  --flip-duration: 0.5s;
+  --border-radius: 10px;
+  --spacing: 16px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+header {
+  padding: var(--spacing) 0;
+}
+
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing);
+  padding: 0 var(--spacing) var(--spacing);
+}
+
+/* --- Stats bar --- */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.stat {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.stat-label {
+  color: var(--color-text-light);
+}
+
+#timer {
+  font-variant-numeric: tabular-nums;
+}
+
+.star {
+  font-size: 1.3rem;
+  color: var(--color-star);
+  transition: color 0.3s;
+}
+
+.star.empty {
+  color: var(--color-star-empty);
+}
+
+#new-game-btn,
+#play-again-btn {
+  padding: 8px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--border-radius);
+  background-color: var(--color-accent);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+#new-game-btn:hover,
+#play-again-btn:hover {
+  opacity: 0.85;
+}
+
+/* --- Settings button --- */
+#settings-btn {
+  padding: 8px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 2px solid var(--color-accent);
+  border-radius: var(--border-radius);
+  background: transparent;
+  color: var(--color-accent);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+#settings-btn:hover,
+#settings-btn[aria-expanded="true"] {
+  background-color: var(--color-accent);
+  color: #fff;
+}
+
+/* --- Settings panel --- */
+.settings-panel {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  background: #fff;
+  border-radius: var(--border-radius);
+  padding: 16px 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.settings-panel[hidden] {
+  display: none;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.settings-row label {
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.settings-row input[type="color"] {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 6px;
+  padding: 2px;
+  cursor: pointer;
+  background: transparent;
+}
+
+/* --- Card grid --- */
+#card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, var(--card-size));
+  gap: var(--card-gap);
+  perspective: 1000px;
+}
+
+/* --- Card --- */
+.card {
+  width: var(--card-size);
+  height: var(--card-size);
+  cursor: pointer;
+  position: relative;
+}
+
+.card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform var(--flip-duration) ease;
+}
+
+.card.flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--border-radius);
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Back face — dark with diagonal stripe pattern + ❓ */
+.card-back {
+  background-color: var(--color-card-back);
+  /* Diagonal stripe pattern */
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.04) 10px,
+    rgba(255, 255, 255, 0.04) 20px
+  );
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-size: 2rem;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.card-back::after {
+  content: '❓';
+}
+
+/* Front face — white with emoji */
+.card-front {
+  background-color: var(--color-card-front);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: rotateY(180deg);
+  font-size: 2.5rem;
+}
+
+/* Matched state */
+.card.matched .card-front {
+  background-color: var(--color-accent);
+  box-shadow: 0 0 12px var(--color-accent-glow);
+}
+
+.card.matched {
+  cursor: default;
+}
+
+/* --- Modal --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-modal-bg);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: calc(var(--border-radius) * 2);
+  padding: 40px;
+  text-align: center;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h2 {
+  margin-bottom: 16px;
+  font-size: 1.6rem;
+}
+
+#modal-stats {
+  margin-bottom: 24px;
+  line-height: 1.8;
+  font-size: 1.05rem;
+  color: var(--color-text-light);
+}
+
+/* --- Responsive --- */
+@media (max-width: 600px) {
+  :root {
+    --card-size: 90px;
+    --card-gap: 10px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .card-front {
+    font-size: 2rem;
+  }
+
+  .card-back {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 400px) {
+  :root {
+    --card-size: 72px;
+    --card-gap: 8px;
+  }
+
+  .stats-bar {
+    gap: 12px;
+  }
+
+  .card-front {
+    font-size: 1.6rem;
+  }
+}

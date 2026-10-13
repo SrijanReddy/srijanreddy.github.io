@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Card Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Memory Game</h1>
+  </header>
+
+  <main>
+    <section class="stats-bar">
+      <div class="stat">
+        <span class="stat-label">Moves:</span>
+        <span id="moves-count">0</span>
+      </div>
+      <div class="stat" id="stars">
+        <span class="star">★</span><span class="star">★</span><span class="star">★</span>
+      </div>
+      <div class="stat">
+        <span id="timer">0:00</span>
+      </div>
+      <button id="new-game-btn">New Game</button>
+      <button id="settings-btn" aria-expanded="false" aria-controls="settings-panel">⚙️ Settings</button>
+    </section>
+
+    <!-- Settings panel -->
+    <div id="settings-panel" class="settings-panel" hidden>
+      <div class="settings-row">
+        <label for="color-board">Board color</label>
+        <input type="color" id="color-board" value="#f0ece3">
+      </div>
+      <div class="settings-row">
+        <label for="color-card-back">Card back color</label>
+        <input type="color" id="color-card-back-input" value="#2c3e50">
+      </div>
+    </div>
+
+    <div id="card-grid"></div>
+  </main>
+
+  <!-- Win modal -->
+  <div id="modal-overlay" class="modal-overlay" hidden role="dialog" aria-labelledby="modal-title">
+    <div class="modal-content">
+      <h2 id="modal-title">Congratulations! 🎉</h2>
+      <div id="modal-stats"></div>
+      <button id="play-again-btn">Play Again</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

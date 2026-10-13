@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sokoban by Cronos</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@4.3.2/tsparticles.confetti.bundle.min.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <h1>Sokoban</h1>
+    <p>Hit Start Problem to Start the problem or to restart the problem when stuck.</p>
+    <div class="game">
+      <canvas id="board"></canvas>
+      <div id="moves-panel">
+        <h2>Moves</h2>
+        <ol id="moves-list"></ol>
+        <button id="download" type="button">Download Moves</button>
+        <button id="upload" type="button">Load Moves</button>
+        <input id="upload-file" type="file" accept=".toon" hidden />
+      </div>
+    </div>
+    <div class="controls">
+      <label>Mode:
+        <select id="mode">
+          <option value="builtin">Built-in</option>
+          <option value="generated">Generated</option>
+        </select>
+      </label>
+      <label id="builtin-controls">Level: <select id="level"></select></label>
+      <span id="generated-controls" hidden>
+        <label>Level: <select id="generated-level"></select></label>
+        <label>Seed: <input id="seed" type="text" inputmode="numeric" /></label>
+        <button id="generate" type="button">Generate</button>
+        <button id="new-seed" type="button">New Seed</button>
+      </span>
+      <button id="restart" type="button">Restart Level</button>
+      <button id="replay" type="button">Replay Moves</button>
+    </div>
+    <div id="status">&nbsp;</div>
+    <script type="importmap">
+      { "imports": { "@toon-format/toon": "https://esm.sh/@toon-format/toon" } }
+    </script>
+    <script type="module" src="sokoban.js"></script>
+  </body>
+</html>
