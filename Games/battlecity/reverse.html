@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle City — ROM Reverse Engineering</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #111;
+      color: #ccc;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 40px 20px 80px;
+    }
+    .page { max-width: 860px; margin: 0 auto; }
+    nav { margin-bottom: 32px; font-size: 11px; color: #444; }
+    nav a { color: #f8e800; text-decoration: none; }
+    nav a:hover { text-decoration: underline; }
+    h1 {
+      font-family: 'Press Start 2P', monospace;
+      color: #f8e800;
+      font-size: 20px;
+      letter-spacing: 3px;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    h1::after {
+      content: '';
+      display: block;
+      width: 48px;
+      height: 2px;
+      background: #f8e800;
+      margin-top: 12px;
+    }
+    .subtitle { color: #555; font-size: 11px; margin-bottom: 36px; margin-top: 6px; }
+    h2 {
+      font-family: 'Press Start 2P', monospace;
+      color: #f8e800;
+      font-size: 11px;
+      letter-spacing: 2px;
+      margin: 40px 0 16px;
+      padding: 14px 16px;
+      background: #161616;
+      border-left: 3px solid #f8e800;
+    }
+    h3 { color: #aaa; font-size: 12px; margin: 20px 0 8px; }
+    p { margin-bottom: 10px; color: #999; }
+    a { color: #f8e800; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 12px; }
+    th { text-align: left; color: #555; font-weight: normal; border-bottom: 1px solid #222; padding: 6px 10px 6px 0; }
+    td { padding: 6px 10px 6px 0; color: #aaa; border-bottom: 1px solid #1a1a1a; vertical-align: top; }
+    td:first-child { color: #f8e800; white-space: nowrap; }
+    code { background: #1a1a1a; color: #f0a060; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+    .note { background: #161616; border-left: 3px solid #333; padding: 12px 16px; margin: 16px 0; color: #666; font-size: 12px; }
+    ul { margin: 8px 0 14px 18px; color: #888; }
+    li { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <nav><a href="index.html">← game</a> &nbsp;·&nbsp; <a href="architecture.html">web port architecture</a> &nbsp;·&nbsp; <a href="catalog.html">asset catalog</a></nav>
+
+  <h1>ROM REVERSE ENGINEERING</h1>
+  <p class="subtitle">Battle City (Namco, 1985) — Famicom / NES</p>
+
+  <h2>ROM IDENTIFICATION</h2>
+  <table>
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>File</td><td>battlecity_famicom.nes (BattleCity (Japan).nes)</td></tr>
+    <tr><td>Format</td><td>iNES</td></tr>
+    <tr><td>CPU</td><td>MOS 6502 (2A03)</td></tr>
+    <tr><td>Mapper</td><td>0 (NROM-128) — 16 KB PRG mirrored at $8000–$BFFF and $C000–$FFFF</td></tr>
+    <tr><td>CHR-ROM</td><td>1 × 8 KB — 512 tiles, fixed pattern table</td></tr>
+    <tr><td>Mirroring</td><td>Horizontal</td></tr>
+    <tr><td>Vectors</td><td>RESET = $C070 &nbsp; NMI = $D400 &nbsp; IRQ = $C070</td></tr>
+    <tr><td>File size</td><td>24,592 bytes (16-byte iNES header + 16 KB PRG + 8 KB CHR)</td></tr>
+  </table>
+  <div class="note">A separate VS System ROM (mapper 99, 32 KB PRG) also exists — the arcade board ran a modified version with coin/credit handling, DIP-switch lives, and palette remapping. This analysis covers the Famicom version.</div>
+
+  <h2>MEMORY MAP</h2>
+  <table>
+    <tr><th>CPU Range</th><th>Size</th><th>Contents</th></tr>
+    <tr><td>$0000–$00FF</td><td>256 B</td><td>Zero-page — heavily used for game state, entity coords, timers</td></tr>
+    <tr><td>$0100–$01FF</td><td>256 B</td><td>Stack</td></tr>
+    <tr><td>$0200–$02FF</td><td>256 B</td><td>OAM shadow — 64 sprite entries (Y, tile, attr, X)</td></tr>
+    <tr><td>$0300–$03FF</td><td>256 B</td><td>Game state: bullet slots, SFX flags, entity status</td></tr>
+    <tr><td>$0400–$05FF</td><td>512 B</td><td>Nametable RAM shadow — 30 rows × 32 cols BG tile indices</td></tr>
+    <tr><td>$8000–$FFFF</td><td>16 KB</td><td>PRG-ROM (mirrored — $8000 = $C000)</td></tr>
+    <tr><td>PPU $0000–$0FFF</td><td>4 KB</td><td>CHR PT0 — background tiles</td></tr>
+    <tr><td>PPU $1000–$1FFF</td><td>4 KB</td><td>CHR PT1 — sprite tiles (8×16 mode)</td></tr>
+  </table>
+
+  <h2>SCREEN LAYOUT</h2>
+  <p>The PPU outputs 256×240 pixels (NTSC). Real CRT TVs hid ~8 px top and bottom (overscan); the web port replicates this crop.</p>
+  <table>
+    <tr><th>Region</th><th>Pixels</th><th>Tiles</th></tr>
+    <tr><td>Top border</td><td>y 0–15</td><td>2 rows — gray border tile $FC</td></tr>
+    <tr><td>Left border</td><td>x 0–15</td><td>2 cols — gray border</td></tr>
+    <tr><td>Playfield</td><td>x 16–223, y 16–223</td><td>26×26 CHR tiles = 13×13 metatiles (16 px each)</td></tr>
+    <tr><td>Right HUD</td><td>x 224–255</td><td>4 cols — enemy tank count, lives, stage#</td></tr>
+    <tr><td>Bottom border</td><td>y 224–239</td><td>2 rows — gray border</td></tr>
+  </table>
+
+  <h2>KEY SUBSYSTEMS</h2>
+
+  <h3>Stage data — <code>$F000 LoadStageData</code> / <code>$F07A StageDataTable</code></h3>
+  <ul>
+    <li>36 stages × 91 bytes each = 3,276 bytes of nibble-encoded map data</li>
+    <li>Each stage: 13 rows × 7 bytes = 13 data nibbles + 1 padding nibble per row</li>
+    <li>Outer loop Y = $10→$D0 step $10 (rows); inner loop X = $10→$D0 step $10 (cols)</li>
+    <li>Each nibble → <code>PlaceTileBlock</code>: writes 4 nametable bytes for one 16×16 metatile</li>
+    <li>Eagle base wall placed separately (not in nibble table) by an independent nametable-write routine</li>
+  </ul>
+
+  <h3>Entity system</h3>
+  <ul>
+    <li>8 entity slots at zero-page <code>$A0–$A7</code> (X coord) and RAM <code>$0103–$010A</code> (Y coord)</li>
+    <li>Slots 0–1: players; slots 2–7: enemies (up to 4 active at once, 20 total per stage)</li>
+    <li>10 bullet slots — slots 0/8 for P1, 1/9 for P2, 2–7/2–7 for enemies</li>
+    <li>Tank type (0–3) controls armor hits, speed tier, and score value</li>
+    <li>Power-up tank flagged at spawn counts 17/10/3 remaining enemies</li>
+  </ul>
+
+  <h3>Movement — <code>$DD30 MoveGridSnap</code></h3>
+  <ul>
+    <li>Tanks snap to 8-pixel grid; probes two leading-edge corners before each step</li>
+    <li>Passability: tile type ≥ $12 → open; brick/steel/water block</li>
+    <li>Partial brick tiles store a 4-bit sub-quadrant mask — individual 8×8 quadrants can be cleared by bullets</li>
+    <li>Ice tiles reduce snap strength; tanks slide 1–2 extra pixels after releasing direction</li>
+  </ul>
+
+  <h3>AI — <code>$DC7C EntityMovementAI</code></h3>
+  <ul>
+    <li>"Fast" tier (type $A0) processes every frame; others alternate frames</li>
+    <li>Direction change triggered when blocked or when <code>RNG &amp; $0F == 0</code></li>
+    <li>Two 9-entry hardcoded direction sequences (set 0/1) cycle through UP/LEFT/DOWN/RIGHT patterns</li>
+    <li>Target-seeking: <code>$DDA0 CalcDirToTarget</code> biases toward player position</li>
+  </ul>
+
+  <h3>Bullet terrain collision — <code>$E604 BulletTerrainCollision</code></h3>
+  <ul>
+    <li>Reads nametable shadow to identify hit tile type (brick, steel, eagle)</li>
+    <li>Brick: clears one or two quadrant bits depending on bullet power level</li>
+    <li>Steel: only erased by armor-piercing (power-up) bullets</li>
+    <li>Eagle hit: starts <code>$68</code> damage countdown → game over</li>
+  </ul>
+
+  <h3>Power-ups — <code>$EA7E</code></h3>
+  <ul>
+    <li>6 types: Star (speed+power), Grenade (kill all enemies), Shield (invincibility), Freeze (stop enemies), Shovel (steel eagle wall), 1-Up (extra life)</li>
+    <li>Grenade triggers 8-frame white flash and kills all active enemies instantly</li>
+    <li>Shovel converts eagle brick wall to steel for a timed duration, then restores it</li>
+  </ul>
+
+  <h3>CHR / graphics</h3>
+  <ul>
+    <li>PT0 ($0000–$0FFF): 256 background tiles — terrain, font, HUD elements, NAMCOT logo</li>
+    <li>PT1 ($1000–$1FFF): 256 sprite tiles — tanks (4 dirs × 2 frames), bullets, explosions, power-ups, eagle</li>
+    <li>Sprites use NES 8×16 mode; each tank is a 2×2 metasprite (4 OAM entries)</li>
+    <li>9 background palette sets (ROM <code>$D565</code>): in-game, water animation (alternates every 32 frames), title, game-over/select, grenade/shovel flash</li>
+    <li>Sprite palettes fixed for all screens (ROM <code>$D555</code>)</li>
+  </ul>
+
+  <h3>Score &amp; HUD</h3>
+  <ul>
+    <li>7-digit BCD score arrays in zero-page: P1 <code>$15–$1B</code>, P2 <code>$1D–$23</code>, Hi-score <code>$3D–$43</code></li>
+    <li>Hi-score persists across soft resets (not power cycles — no battery)</li>
+    <li>Result screen tallies kills by tank type, awards bonus score per type</li>
+    <li>Extra life granted at every 20,000 points (<code>$CF44 LivesGrantCheck</code>)</li>
+  </ul>
+
+  <h2>TOOLS BUILT</h2>
+  <table>
+    <tr><th>Script</th><th>Purpose</th></tr>
+    <tr><td><code>instruction_set.py</code></td><td>Complete 6502 opcode database with cycle counts and addressing modes</td></tr>
+    <tr><td><code>dis.py</code></td><td>Targeted disassembler — reads labels.csv + comments.csv, annotates output inline</td></tr>
+    <tr><td><code>extract_tiles.py</code></td><td>Decode 2bpp CHR-ROM → PNG tile sheet (32×16 grid, 9px cells)</td></tr>
+    <tr><td><code>extract_level_maps.py</code></td><td>Decode nibble-encoded stage data → tile type arrays</td></tr>
+    <tr><td><code>render_screen.py</code></td><td>Composite full screens from nametable + CHR + palette data</td></tr>
+    <tr><td><code>search_bytes.py</code></td><td>Byte-pattern search with context and optional inline disassembly</td></tr>
+    <tr><td><code>xref.py</code></td><td>Find all call/jump/load references to a given address</td></tr>
+    <tr><td><code>decode_tables.py</code></td><td>Flat and two-level pointer table decoder</td></tr>
+  </table>
+</div>
+</body>
+</html>
