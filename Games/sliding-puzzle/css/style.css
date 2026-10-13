@@ -1,0 +1,222 @@
+:root {
+  --bg: #0f0f1a;
+  --surface: #1a1a2e;
+  --surface2: #16213e;
+  --accent: #e94560;
+  --accent2: #0f3460;
+  --text: #eee;
+  --text-dim: #888;
+  --tile-radius: 12px;
+  --gap: 4px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+}
+
+/* Header */
+h1 {
+  font-size: 2rem;
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, var(--accent), #ff6b6b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.controls button,
+.controls select {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.controls button:hover {
+  background: var(--accent);
+  transform: translateY(-1px);
+}
+
+.controls select {
+  appearance: none;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23eee' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.controls select:focus {
+  border: 1px solid var(--accent);
+}
+
+/* Stats */
+.stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  font-size: 1rem;
+}
+
+.stats span { color: var(--text-dim); }
+.stats strong { color: var(--text); }
+
+/* Board */
+.board-container {
+  position: relative;
+}
+
+.board {
+  display: grid;
+  gap: var(--gap);
+  padding: var(--gap);
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+              inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* Tiles */
+.tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--tile-radius);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  background: linear-gradient(145deg, var(--surface2), #1a1a3e);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.tile:not(.empty):hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 16px rgba(233, 69, 96, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.tile:not(.empty):active {
+  transform: scale(0.97);
+}
+
+.tile.empty {
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+
+.tile.correct {
+  background: linear-gradient(145deg, #1a3a2e, #16213e);
+  box-shadow: 0 2px 8px rgba(0, 255, 100, 0.15),
+              inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Win Overlay */
+.win-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  z-index: 100;
+  animation: fadeIn 0.3s;
+}
+
+.win-overlay.show { display: flex; }
+
+.win-overlay h2 {
+  font-size: 3rem;
+  margin-bottom: 8px;
+  animation: bounceIn 0.5s;
+}
+
+.win-overlay p {
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+}
+
+.win-overlay button {
+  padding: 12px 32px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.win-overlay button:hover {
+  transform: scale(1.05);
+}
+
+/* Confetti */
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  z-index: 101;
+  animation: confettiFall 3s ease-out forwards;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  h1 { font-size: 1.5rem; }
+  .stats { gap: 16px; font-size: 0.9rem; }
+}
