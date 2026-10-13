@@ -1,0 +1,31 @@
+body{
+    text-align: center;
+    
+}
+.color{
+    width: 200px;
+    height: 200px;
+    border: 10px solid black;
+    border-radius: 20%;
+    margin: 2.5rem;
+    
+}
+.main{
+    display: flex;
+    justify-content: center;
+}
+.red{
+    background-color: red;
+}
+.yellow{
+    background-color: yellow;
+}
+.blue{
+    background-color: blue;
+}
+.green{
+    background-color: green;
+}
+.flash{
+    background-color: white;
+}

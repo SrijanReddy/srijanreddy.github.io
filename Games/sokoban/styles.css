@@ -1,0 +1,64 @@
+body {
+  background: #edf5ff;
+  color: #000080;
+  font-family: system-ui, sans-serif;
+  text-align: center;
+  margin: 1.5rem;
+}
+/* Scoped to the board: the confetti overlay is also a canvas, and must stay
+   transparent so it draws on top of the page instead of covering it. */
+#board {
+  background: #edf5ff;
+  image-rendering: pixelated;
+}
+.controls {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+}
+#generated-controls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+#generated-controls[hidden] {
+  display: none;
+}
+#seed {
+  width: 7rem;
+}
+#status {
+  min-height: 1.2em;
+  margin-top: 0.5rem;
+}
+.game {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+#moves-panel {
+  text-align: left;
+  width: 9rem;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+#moves-panel h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+#moves-list {
+  flex: 1;
+  max-height: 600px;
+  overflow-y: auto;
+  border: 1px solid #000080;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  margin: 0 0 0.5rem;
+  list-style-position: inside;
+  font-variant-numeric: tabular-nums;
+}
