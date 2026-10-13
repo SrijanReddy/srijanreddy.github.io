@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Battle City — Web Port</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'IBM Plex Mono', monospace;
+      color: #888;
+      padding: 24px 20px;
+    }
+    h1 {
+      font-family: 'Press Start 2P', monospace;
+      color: #f8e800;
+      font-size: 22px;
+      letter-spacing: 6px;
+      margin-bottom: 10px;
+    }
+    #screen {
+      overflow: hidden;
+      line-height: 0;
+      border: 1px solid #2a2a2a;
+      background: #000;
+      box-shadow: 0 0 60px rgba(248,232,0,0.10), 0 0 0 1px #1a1a1a;
+    }
+    #screen:fullscreen, #screen:-webkit-full-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+    }
+    #screen:fullscreen canvas, #screen:-webkit-full-screen canvas {
+      width: auto;
+      height: 100vh;
+      aspect-ratio: 256 / 224;
+      margin: 0;
+      max-width: 100vw;
+      object-fit: contain;
+    }
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      margin-top: -24px;  /* hide 8 NES px × SCALE=3 overscan top */
+      margin-bottom: -24px; /* hide 8 NES px × SCALE=3 overscan bottom */
+    }
+    .about {
+      margin-top: 14px;
+      font-size: 11px;
+      color: #555;
+      text-align: center;
+      line-height: 1.8;
+      max-width: 520px;
+    }
+    .about a {
+      color: #f8e800;
+      text-decoration: none;
+    }
+    .about a:hover { text-decoration: underline; }
+    #sitenav {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: #444;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+    #sitenav a { color: #f8e800; text-decoration: none; }
+    #sitenav a:hover { text-decoration: underline; }
+    .hb { display: flex; align-items: center; gap: 5px; color: #666; font-size: 11px; }
+    .hb kbd {
+      display: inline-block;
+      padding: 2px 7px;
+      background: #1e1e1e;
+      border: 1px solid #3a3a3a;
+      border-bottom: 2px solid #2a2a2a;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #bbb;
+      line-height: 1.5;
+      white-space: nowrap;
+    }
+
+    /* ── Virtual gamepad (hidden on desktop, shown on mobile) ───────────── */
+    #vpad {
+      display: none;
+      width: 100%;
+      flex: 1;
+      min-height: 130px;
+      max-height: 260px;
+      padding: 12px 28px 20px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* ── Mobile layout ────────────────────────────────────────────────────── */
+    @media (max-width: 800px), (hover: none) and (pointer: coarse) {
+      body {
+        justify-content: flex-start;
+        height: 100svh;
+        height: 100vh; /* fallback */
+        overflow: hidden;
+        padding: 6px 0 env(safe-area-inset-bottom);
+      }
+      h1 { font-size: 10px; margin-bottom: 2px; }
+      #sitenav { font-size: 10px; margin-bottom: 2px; }
+      #controls-hint, .about { display: none; }
+      #screen { width: 100vw; border: none; }
+      canvas {
+        width: 100vw;
+        height: calc(100vw * 240 / 256);
+        margin-top: calc(-100vw * 8 / 256);
+        margin-bottom: calc(-100vw * 8 / 256);
+      }
+      #vpad { display: flex; }
+    }
+
+    /* ── Landscape mobile ──────────────────────────────────────────────── */
+    @media (max-height: 500px) and (orientation: landscape) {
+      body {
+        flex-direction: row;
+        padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+        justify-content: center;
+        align-items: center;
+        gap: 0;
+      }
+      h1, #sitenav, #controls-hint, .about, #toolbar { display: none; }
+      #screen { width: auto; border: none; flex-shrink: 0; }
+      canvas {
+        width: auto;
+        height: 100vh;
+        height: 100svh;
+        aspect-ratio: 256 / 224;
+        margin-top: calc(-100vh * 8 / 240);
+        margin-bottom: calc(-100vh * 8 / 240);
+      }
+      #vpad {
+        display: flex;
+        flex-direction: row;
+        min-height: unset;
+        max-height: unset;
+        height: 100vh;
+        height: 100svh;
+        padding: 12px;
+        flex: 1;
+        align-items: center;
+      }
+      #dpad { width: 110px; height: 110px; }
+      #vpad-mid { padding-top: 0; }
+      #btn-fire { width: 64px; height: 64px; }
+    }
+
+    #dpad {
+      width: 140px;
+      height: 140px;
+      position: relative;
+      background: #1a1a1a;
+      border: 2px solid #363636;
+      border-radius: 50%;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+    }
+    /* Plus-shaped center marker */
+    #dpad::before, #dpad::after {
+      content: '';
+      position: absolute;
+      background: #252525;
+      pointer-events: none;
+    }
+    #dpad::before { left: 33%; right: 33%; top: 0; bottom: 0; }
+    #dpad::after  { top: 33%; bottom: 33%; left: 0; right: 0; }
+
+    .dpad-arr {
+      position: absolute;
+      color: #444;
+      font-size: 13px;
+      pointer-events: none;
+      z-index: 1;
+      line-height: 1;
+      transition: color 0.05s;
+    }
+    .dpad-arr.active { color: #f8e800; }
+    .dpad-arr.up   { top: 10px;    left: 50%; transform: translateX(-50%); }
+    .dpad-arr.dn   { bottom: 10px; left: 50%; transform: translateX(-50%); }
+    .dpad-arr.lt   { left: 10px;   top: 50%;  transform: translateY(-50%); }
+    .dpad-arr.rt   { right: 10px;  top: 50%;  transform: translateY(-50%); }
+
+    #vpad-mid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      padding-top: 28px;
+    }
+
+    .vbtn {
+      background: #1a1a1a;
+      border: 2px solid #363636;
+      border-radius: 50%;
+      color: #555;
+      font-family: 'Press Start 2P', monospace;
+      font-weight: bold;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .vbtn.pressed { background: #282828; }
+
+    #btn-start {
+      width: 52px;
+      height: 52px;
+      font-size: 5px;
+      letter-spacing: 0px;
+    }
+    #btn-start.pressed { border-color: #555; color: #aaa; }
+
+    #btn-fire {
+      width: 80px;
+      height: 80px;
+      color: #f8e800;
+      border-color: #555;
+      font-size: 7px;
+      letter-spacing: 0px;
+      flex-shrink: 0;
+    }
+    #btn-fire.pressed { background: #2a2600; border-color: #f8e800; }
+
+    #vpad-right {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    #btn-b {
+      width: 54px;
+      height: 54px;
+      font-size: 6px;
+      color: #888;
+      display: none; /* shown only in edit mode */
+    }
+    #btn-b.pressed { background: #282828; border-color: #555; }
+
+    /* ── Toolbar + controls hint row ─────────────────────────────────────── */
+    #hint-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 10px;
+      min-height: 22px;
+      flex-wrap: wrap;
+      max-width: 600px;
+    }
+    #controls-hint {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #toolbar {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      border-left: 1px solid #2a2a2a;
+      padding-left: 12px;
+      margin-left: 4px;
+    }
+    .tool-btn {
+      background: none;
+      border: 1px solid #2a2a2a;
+      border-radius: 4px;
+      color: #555;
+      padding: 4px 8px;
+      cursor: pointer;
+      line-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tool-btn:hover { border-color: #555; color: #ccc; }
+    .tool-btn:active { background: #222; }
+    #btn-sound .icon-mut { display: none; }
+    #btn-sound.muted .icon-snd { display: none; }
+    #btn-sound.muted .icon-mut { display: block; }
+    #btn-record.recording { border-color: #e44; }
+    #btn-record.recording .icon-rec-idle { display: none; }
+    #btn-record.recording .icon-rec-on { display: block !important; }
+    @keyframes rec-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    #btn-record.recording .icon-rec-on { animation: rec-pulse 1s infinite; }
+    #mobile-tools {
+      display: none;
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      gap: 8px;
+      z-index: 100;
+    }
+    .mtool-btn {
+      background: rgba(26,26,26,0.85);
+      border: 1px solid #363636;
+      border-radius: 50%;
+      color: #888;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      line-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mtool-btn:active { background: rgba(50,50,50,0.9); color: #ccc; }
+    #mbtn-sound .icon-mut { display: none; }
+    #mbtn-sound.muted .icon-snd { display: none; }
+    #mbtn-sound.muted .icon-mut { display: block; }
+    @media (max-width: 800px), (hover: none) and (pointer: coarse) {
+      #mobile-tools { display: flex; }
+    }
+    /* iOS Safari soft-fullscreen: hide chrome, maximize canvas */
+    body.soft-fs { padding: 0; justify-content: center; align-items: center; }
+    body.soft-fs h1,
+    body.soft-fs #sitenav,
+    body.soft-fs .about { display: none !important; }
+    body.soft-fs #screen { width: auto; border: none; }
+    body.soft-fs canvas {
+      /* fit to viewport preserving 256:224 aspect, no overscan margins */
+      width: min(100vw, calc(100vh * 256 / 224));
+      height: min(100vh, calc(100vw * 224 / 256));
+      margin: 0;
+    }
+    body.soft-fs #mobile-tools { bottom: 8px; }
+    @media (max-width: 800px) {
+      #hint-row { display: none; }
+    }
+
+    /* ── Context panels (shown in vpad-mid based on phase) ───────────────── */
+    #vpad-mid { position: relative; }
+
+    .ctx-panel {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .ctx-panel.active { display: flex; }
+
+    /* Stage selector */
+    #ctx-stage {
+      align-items: center;
+      gap: 4px;
+    }
+    #ctx-stage .ctx-label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      color: #555;
+      letter-spacing: 1px;
+    }
+    #ctx-stage .ctx-value {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 16px;
+      color: #f8e800;
+      min-width: 40px;
+      text-align: center;
+    }
+    #ctx-stage .ctx-arrow {
+      background: #1a1a1a;
+      border: 2px solid #363636;
+      border-radius: 6px;
+      color: #f8e800;
+      font-size: 14px;
+      width: 44px;
+      height: 28px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #ctx-stage .ctx-arrow:active { background: #2a2600; border-color: #f8e800; }
+
+    /* Tile selector */
+    #ctx-tile {
+      align-items: center;
+      gap: 4px;
+    }
+    #ctx-tile .ctx-tile-name {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 5px;
+      color: #f8e800;
+      letter-spacing: 0.5px;
+      text-align: center;
+      max-width: 80px;
+      line-height: 1.6;
+    }
+    #ctx-tile .ctx-arrow {
+      background: #1a1a1a;
+      border: 2px solid #363636;
+      border-radius: 6px;
+      color: #aaa;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      width: 72px;
+      height: 26px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      gap: 4px;
+    }
+    #ctx-tile .ctx-arrow:active { background: #222; border-color: #555; }
+  </style>
+</head>
+<body>
+  <h1>BATTLE CITY</h1>
+  <nav id="sitenav">
+    <a href="reverse.html">RE notes</a> &nbsp;·&nbsp;
+    <a href="architecture.html">architecture</a> &nbsp;·&nbsp;
+    <a href="catalog.html">catalog</a>
+  </nav>
+  <div id="screen"><canvas id="game"></canvas></div>
+  <div id="hint-row">
+    <div id="controls-hint"></div>
+    <div id="toolbar">
+      <!-- Fullscreen: four corner brackets -->
+      <button class="tool-btn" id="btn-fullscreen" title="Fullscreen (F)">
+        <svg width="14" height="14" viewBox="0 0 14 14" shape-rendering="crispEdges" fill="currentColor">
+          <rect x="0" y="0" width="4" height="2"/><rect x="0" y="0" width="2" height="4"/>
+          <rect x="10" y="0" width="4" height="2"/><rect x="12" y="0" width="2" height="4"/>
+          <rect x="0" y="10" width="2" height="4"/><rect x="0" y="12" width="4" height="2"/>
+          <rect x="12" y="10" width="2" height="4"/><rect x="10" y="12" width="4" height="2"/>
+        </svg>
+      </button>
+      <!-- Record: circle (idle) / square (recording) -->
+      <button class="tool-btn" id="btn-record" title="Record video (R)">
+        <svg class="icon-rec-idle" width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+          <circle cx="7" cy="7" r="5"/>
+        </svg>
+        <svg class="icon-rec-on" width="14" height="14" viewBox="0 0 14 14" fill="#e44" style="display:none">
+          <rect x="3" y="3" width="8" height="8" rx="1"/>
+        </svg>
+      </button>
+      <!-- Sound: side-view speaker + wave arcs / X -->
+      <button class="tool-btn" id="btn-sound" title="Sound on/off (M)">
+        <svg class="icon-snd" width="22" height="14" viewBox="0 0 22 14" shape-rendering="crispEdges" fill="currentColor">
+          <!-- speaker back plate -->
+          <rect x="0" y="4" width="4" height="6"/>
+          <!-- speaker cone -->
+          <rect x="4" y="2" width="4" height="10"/>
+          <!-- small wave ) -->
+          <rect x="10" y="4" width="2" height="2"/>
+          <rect x="12" y="6" width="2" height="2"/>
+          <rect x="10" y="8" width="2" height="2"/>
+          <!-- large wave ) -->
+          <rect x="16" y="2" width="2" height="2"/>
+          <rect x="18" y="4" width="2" height="6"/>
+          <rect x="16" y="10" width="2" height="2"/>
+        </svg>
+        <svg class="icon-mut" width="22" height="14" viewBox="0 0 22 14" shape-rendering="crispEdges" fill="currentColor">
+          <!-- speaker back plate -->
+          <rect x="0" y="4" width="4" height="6"/>
+          <!-- speaker cone -->
+          <rect x="4" y="2" width="4" height="10"/>
+          <!-- X -->
+          <rect x="12" y="2" width="2" height="2"/><rect x="20" y="2" width="2" height="2"/>
+          <rect x="14" y="4" width="2" height="2"/><rect x="18" y="4" width="2" height="2"/>
+          <rect x="16" y="6" width="2" height="2"/>
+          <rect x="14" y="8" width="2" height="2"/><rect x="18" y="8" width="2" height="2"/>
+          <rect x="12" y="10" width="2" height="2"/><rect x="20" y="10" width="2" height="2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div id="vpad">
+    <div id="dpad">
+      <span class="dpad-arr up">▲</span>
+      <span class="dpad-arr dn">▼</span>
+      <span class="dpad-arr lt">◀</span>
+      <span class="dpad-arr rt">▶</span>
+    </div>
+    <div id="vpad-mid">
+      <button class="vbtn" id="btn-start">START</button>
+
+      <!-- Stage selector (shown in 'select' phase) -->
+      <div class="ctx-panel" id="ctx-stage">
+        <span class="ctx-label">STAGE</span>
+        <span class="ctx-value" id="ctx-stage-num">1</span>
+        <div style="display:flex;gap:6px">
+          <button class="ctx-arrow" id="ctx-stage-prev">◀</button>
+          <button class="ctx-arrow" id="ctx-stage-next">▶</button>
+        </div>
+      </div>
+
+      <!-- Tile selector (shown in 'edit' phase) -->
+      <div class="ctx-panel" id="ctx-tile">
+        <span class="ctx-tile-name" id="ctx-tile-name">BRICK</span>
+        <button class="ctx-arrow" id="ctx-tile-prev">◀ PREV</button>
+        <button class="ctx-arrow" id="ctx-tile-next">NEXT ▶</button>
+      </div>
+    </div>
+    <div id="vpad-right">
+      <button class="vbtn" id="btn-fire">FIRE</button>
+      <button class="vbtn" id="btn-b">B</button>
+    </div>
+  </div>
+  <div id="mobile-tools">
+    <button class="mtool-btn" id="mbtn-fullscreen">
+      <svg width="14" height="14" viewBox="0 0 14 14" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="0" y="0" width="4" height="2"/><rect x="0" y="0" width="2" height="4"/>
+        <rect x="10" y="0" width="4" height="2"/><rect x="12" y="0" width="2" height="4"/>
+        <rect x="0" y="10" width="2" height="4"/><rect x="0" y="12" width="4" height="2"/>
+        <rect x="12" y="10" width="2" height="4"/><rect x="10" y="12" width="4" height="2"/>
+      </svg>
+    </button>
+    <button class="mtool-btn" id="mbtn-sound">
+      <svg class="icon-snd" width="18" height="14" viewBox="0 0 22 14" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="0" y="4" width="4" height="6"/><rect x="4" y="2" width="4" height="10"/>
+        <rect x="10" y="4" width="2" height="2"/><rect x="12" y="6" width="2" height="2"/><rect x="10" y="8" width="2" height="2"/>
+        <rect x="16" y="2" width="2" height="2"/><rect x="18" y="4" width="2" height="6"/><rect x="16" y="10" width="2" height="2"/>
+      </svg>
+      <svg class="icon-mut" width="18" height="14" viewBox="0 0 22 14" shape-rendering="crispEdges" fill="currentColor">
+        <rect x="0" y="4" width="4" height="6"/><rect x="4" y="2" width="4" height="10"/>
+        <rect x="12" y="2" width="2" height="2"/><rect x="20" y="2" width="2" height="2"/>
+        <rect x="14" y="4" width="2" height="2"/><rect x="18" y="4" width="2" height="2"/>
+        <rect x="16" y="6" width="2" height="2"/>
+        <rect x="14" y="8" width="2" height="2"/><rect x="18" y="8" width="2" height="2"/>
+        <rect x="12" y="10" width="2" height="2"/><rect x="20" y="10" width="2" height="2"/>
+      </svg>
+    </button>
+  </div>
+  <p class="about">
+    Faithful web reimplementation of the 1985 Namco Famicom game,<br>
+    built by reverse-engineering the original ROM — CHR tiles, palettes,<br>
+    level maps, physics, and sound reconstructed from scratch.<br>
+    <a href="reverse.html">ROM reverse engineering</a> &nbsp;·&nbsp;
+    <a href="architecture.html">web port architecture</a> &nbsp;·&nbsp;
+    <a href="catalog.html">asset catalog</a>
+  </p>
+  <p class="about" style="margin-top: 8px;">
+    <a href="https://github.com/vgrichina/re-skill">re-skill</a> — Claude Code skill for ROM reverse engineering &nbsp;·&nbsp;
+    <a href="/remix">Remix on Berrry</a>
+  </p>
+  <script src="levels.js"></script>
+  <script src="sound.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
